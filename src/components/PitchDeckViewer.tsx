@@ -46,7 +46,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
   const watermarkString = `CONFIDENTIAL • ${currentUser.name.toUpperCase()} (${currentUser.organization.toUpperCase()}) • ${currentUser.email} • REALTIME AUDITED SESSION`;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs relative select-none">
       {/* Dynamic Screen-Privacy Watermark Overlay (Navy Tone) */}
       {isWatermarkActive && (
         <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden flex flex-col justify-around py-8 opacity-20">
@@ -62,7 +62,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
       )}
 
       {/* Top Presentation Bar (White & Navy) */}
-      <div className="h-12 bg-white border-b border-slate-200 px-4 flex items-center justify-between z-20">
+      <div className="h-12 bg-white border-b border-slate-100 px-4 flex items-center justify-between z-20">
         <div className="flex items-center space-x-3">
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 text-[#0f172a] border border-slate-300">
             {slide.category}

@@ -70,44 +70,44 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   }, []);
 
   return (
-    <div className="h-20 bg-white border-t border-slate-200 px-4 sm:px-6 flex items-center justify-between z-30 select-none shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+    <div className="h-20 bg-white border-t border-slate-100 px-4 sm:px-6 flex items-center justify-between z-30 select-none shadow-xs">
       {/* Left: Meeting Time & Room Identifier in Navy Blue */}
       <div className="hidden md:flex items-center space-x-3 text-sm font-semibold text-[#0f172a]">
         <span className="font-mono text-xs text-slate-500">{currentTime}</span>
         <span className="text-slate-300">|</span>
         <span className="text-xs font-bold text-[#0f172a]">{roomCode}</span>
-        <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] text-emerald-700 font-bold">
+        <div className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-[10px] text-emerald-700 font-bold">
           <ShieldCheck className="w-3 h-3 text-emerald-600" />
-          <span>Encrypted</span>
+          <span>E2EE Active</span>
         </div>
       </div>
 
-      {/* Center: Iconic Round Action Buttons in Deep Navy & Red */}
+      {/* Center: Action Buttons in Deep Navy & Accents */}
       <div className="flex items-center space-x-2 sm:space-x-2.5 mx-auto md:mx-0">
         {/* Mic Toggle */}
         <button
           onClick={onToggleMic}
-          className={`p-3 rounded-full transition-all shadow-sm active:scale-95 ${
+          className={`p-3 rounded-full transition-all shadow-xs active:scale-95 ${
             currentUser.isMuted
-              ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+              ? 'bg-red-500 text-white hover:bg-red-600 ring-2 ring-red-200'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title={currentUser.isMuted ? 'Turn on microphone' : 'Turn off microphone'}
         >
-          {currentUser.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+          {currentUser.isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
         </button>
 
         {/* Video Toggle */}
         <button
           onClick={onToggleVideo}
-          className={`p-3 rounded-full transition-all shadow-sm active:scale-95 ${
+          className={`p-3 rounded-full transition-all shadow-xs active:scale-95 ${
             currentUser.isVideoOff
-              ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+              ? 'bg-red-500 text-white hover:bg-red-600 ring-2 ring-red-200'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title={currentUser.isVideoOff ? 'Turn on camera' : 'Turn off camera'}
         >
-          {currentUser.isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
+          {currentUser.isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
         </button>
 
         {/* Captions CC */}
@@ -120,7 +120,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           }`}
           title="Turn on/off captions"
         >
-          <Subtitles className="w-5 h-5" />
+          <Subtitles className="w-4 h-4" />
         </button>
 
         {/* Emoji Reactions Picker */}
@@ -130,16 +130,16 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             className="p-3 rounded-full bg-[#0f172a] text-white hover:bg-[#1e293b] transition-colors"
             title="Send a reaction"
           >
-            <Smile className="w-5 h-5" />
+            <Smile className="w-4 h-4" />
           </button>
 
           {showEmojiPicker && (
-            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-white border border-slate-200 p-2 rounded-full flex items-center space-x-1 shadow-2xl z-50">
+            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-white border border-slate-100 p-2 rounded-2xl flex items-center space-x-1 shadow-xl z-50">
               {['👍', '❤️', '👏', '🎉', '🚀', '🔥'].map((emoji) => (
                 <button
                   key={emoji}
                   onClick={() => setShowEmojiPicker(false)}
-                  className="hover:scale-125 transition-transform text-lg p-1"
+                  className="hover:scale-125 transition-transform text-lg p-1.5"
                 >
                   {emoji}
                 </button>
@@ -158,7 +158,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           }`}
           title="Share screen"
         >
-          <ScreenShare className="w-5 h-5" />
+          <ScreenShare className="w-4 h-4" />
         </button>
 
         {/* In-Call Developer IDE */}
@@ -166,12 +166,12 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           onClick={() => onTabChange(activeTab === 'code-ide' ? 'stage' : 'code-ide')}
           className={`p-3 rounded-full transition-colors ${
             activeTab === 'code-ide'
-              ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-md'
+              ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title="In-Call Developer IDE & Runtime Sandbox"
         >
-          <Code className="w-5 h-5" />
+          <Code className="w-4 h-4" />
         </button>
 
         {/* Architecture Whiteboard */}
@@ -179,12 +179,12 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           onClick={() => onTabChange(activeTab === 'whiteboard' ? 'stage' : 'whiteboard')}
           className={`p-3 rounded-full transition-colors hidden sm:inline-flex ${
             activeTab === 'whiteboard'
-              ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-md'
+              ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title="Architecture & System Whiteboard"
         >
-          <Layout className="w-5 h-5" />
+          <Layout className="w-4 h-4" />
         </button>
 
         {/* Pitch Deck Presenter */}
@@ -192,12 +192,12 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           onClick={() => onTabChange(activeTab === 'pitch-deck' ? 'stage' : 'pitch-deck')}
           className={`p-3 rounded-full transition-colors hidden md:inline-flex ${
             activeTab === 'pitch-deck'
-              ? 'bg-blue-600 text-white ring-2 ring-blue-300 shadow-md'
+              ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title="Investor Pitch Deck with Privacy Watermarks"
         >
-          <Presentation className="w-5 h-5" />
+          <Presentation className="w-4 h-4" />
         </button>
 
         {/* Hand Raise */}
@@ -205,21 +205,21 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           onClick={onToggleHandRaise}
           className={`p-3 rounded-full transition-colors ${
             currentUser.handRaised
-              ? 'bg-amber-400 text-slate-950 font-bold shadow-md'
+              ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
               : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
           }`}
           title={currentUser.handRaised ? 'Lower hand' : 'Raise hand'}
         >
-          <Hand className="w-5 h-5" />
+          <Hand className="w-4 h-4" />
         </button>
 
-        {/* End Call Button (Red pill button) */}
+        {/* End Call Button */}
         <button
           onClick={onLeaveMeeting}
-          className="px-5 py-3 rounded-full bg-[#ea4335] hover:bg-[#d93025] text-white font-bold text-sm shadow-md transition-all active:scale-95 flex items-center space-x-1"
+          className="px-5 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-bold text-sm shadow-xs transition-all active:scale-95 flex items-center space-x-1"
           title="Leave call"
         >
-          <PhoneOff className="w-5 h-5" />
+          <PhoneOff className="w-4 h-4" />
         </button>
       </div>
 
@@ -228,15 +228,15 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
         {/* Gemini AI Notes Pill Button */}
         <button
           onClick={() => onTabChange(activeTab === 'ai-intelligence' ? 'stage' : 'ai-intelligence')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold shadow-sm transition-all ${
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs ${
             activeTab === 'ai-intelligence'
-              ? 'bg-[#0f172a] text-white ring-2 ring-blue-400'
+              ? 'bg-[#0f172a] text-white'
               : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white'
           }`}
           title="Gemini Live Meeting Intelligence & Minutes"
         >
           <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
-          <span className="hidden xl:inline">Gemini is taking notes</span>
+          <span className="hidden xl:inline">Gemini Copilot</span>
           <span className="xl:hidden">AI</span>
         </button>
 
@@ -248,7 +248,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           }`}
           title="Conference Agenda & Backstage Green Room"
         >
-          <Calendar className="w-5 h-5" />
+          <Calendar className="w-4 h-4" />
         </button>
 
         {/* Deal Room Modal */}
@@ -257,7 +257,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           className="p-2.5 rounded-full text-slate-600 hover:bg-slate-100 hover:text-emerald-700 transition-colors hidden sm:inline-flex"
           title="Institutional Deal Room & Term Sheet"
         >
-          <Briefcase className="w-5 h-5" />
+          <Briefcase className="w-4 h-4" />
         </button>
 
         {/* Chat Button */}
@@ -268,9 +268,9 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           }`}
           title="Chat with everyone"
         >
-          <MessageSquare className="w-5 h-5" />
+          <MessageSquare className="w-4 h-4" />
           {unreadCount > 0 && !isChatOpen && (
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-blue-600" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600 ring-2 ring-white" />
           )}
         </button>
       </div>

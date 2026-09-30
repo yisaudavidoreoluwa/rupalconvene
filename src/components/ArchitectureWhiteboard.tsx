@@ -172,9 +172,9 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none">
       {/* Top Toolbar (White & Navy) */}
-      <div className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between">
+      <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between">
         {/* Node creation controls */}
         <div className="flex items-center space-x-2">
           <select

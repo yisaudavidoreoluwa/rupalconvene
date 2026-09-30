@@ -47,12 +47,12 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
   return (
     <div
-      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] border transition-all duration-300 flex flex-col justify-between shadow-md select-none ${
+      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] transition-all duration-200 flex flex-col justify-between shadow-xs select-none ${
         participant.isSpeaking
-          ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-emerald-500/10'
+          ? 'ring-2 ring-emerald-500 shadow-emerald-500/10'
           : isPinned
-          ? 'ring-2 ring-blue-500 border-blue-500'
-          : 'border-[#1e293b] hover:border-slate-600'
+          ? 'ring-2 ring-blue-500'
+          : 'ring-1 ring-slate-800/60 hover:ring-slate-700'
       }`}
     >
       {/* Video Content Layer */}
@@ -73,18 +73,17 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         {(!isSelf || participant.isVideoOff) && (
           <div className="relative w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#0f172a] via-[#0a192f] to-[#0f172a]">
             <div className="relative mb-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={participant.avatar}
                 alt={participant.name}
-                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 shadow-xl transition-transform group-hover:scale-105 ${
+                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg transition-transform group-hover:scale-105 ${
                   participant.isSpeaking
-                    ? 'ring-emerald-400 ring-offset-2 ring-offset-[#0a192f]'
-                    : 'ring-[#1e293b]'
+                    ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-[#0a192f]'
+                    : 'ring-1 ring-slate-700'
                 }`}
               />
               {participant.isSpeaking && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full text-white shadow">
+                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full text-white shadow-xs">
                   <Volume2 className="w-3.5 h-3.5 animate-pulse" />
                 </div>
               )}
@@ -105,11 +104,11 @@ export const VideoTile: React.FC<VideoTileProps> = ({
       {/* Top Bar: Role Pill & Mic Status */}
       <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
         <div className="flex items-center space-x-1.5">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border backdrop-blur-md ${badge.color}`}>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase backdrop-blur-md ${badge.color}`}>
             {badge.label}
           </span>
           {participant.handRaised && (
-            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded text-[10px] font-bold">
+            <span className="bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded text-[10px] font-bold">
               ✋ Hand Raised
             </span>
           )}
@@ -118,7 +117,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         {/* Top-Right Mute Badge */}
         <div className="flex items-center space-x-1">
           {participant.isMuted && (
-            <div className="p-1 rounded-full bg-[#ea4335] text-white shadow-md" title="Muted">
+            <div className="p-1 rounded-full bg-red-500 text-white shadow-xs" title="Muted">
               <MicOff className="w-3 h-3" />
             </div>
           )}
@@ -139,13 +138,13 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
       {/* Bottom Bar: Name Tag in Navy Pill */}
       <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
-        <div className="px-2.5 py-1 rounded-md bg-[#0f172a]/90 text-white text-xs font-semibold backdrop-blur-md border border-[#1e293b] flex items-center space-x-1.5 shadow-sm">
+        <div className="px-2.5 py-1 rounded-md bg-[#0f172a]/90 text-white text-xs font-semibold backdrop-blur-md flex items-center space-x-1.5 shadow-xs">
           <span>{participant.name} {isSelf && '(You)'}</span>
         </div>
 
         {/* Speaking Waveform Indicator */}
         {participant.isSpeaking && (
-          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#0f172a]/90 border border-emerald-500/40">
+          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#0f172a]/90">
             <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" />
             <span className="w-0.5 h-3.5 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms]" />
             <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms]" />

@@ -18,7 +18,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
 
   if (!isOpen) return null;
 
-  const meetingUrl = `https://techconvene.io/meet/${roomCode}`;
+  const meetingUrl = `https://rupal.tech/convene/${roomCode}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(meetingUrl);
@@ -40,19 +40,19 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md select-none">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm select-none animate-in fade-in duration-200">
+      <div className="relative w-full max-w-lg bg-white border border-slate-100 rounded-3xl shadow-2xl overflow-hidden flex flex-col text-slate-800">
         {/* Header */}
-        <div className="p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+        <div className="p-5 bg-white border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 rounded-2xl bg-blue-50 text-blue-700">
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white tracking-wide">
+              <h3 className="text-base font-bold text-[#0f172a] tracking-tight">
                 Invite Partners & Engineers
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 Grant role-based access with NDA and runtime privileges
               </p>
             </div>
@@ -60,7 +60,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
 
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -70,7 +70,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
         <div className="p-6 space-y-5 text-xs sm:text-sm">
           {/* Direct Meeting Link */}
           <div>
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-1.5">
               Secure Conference URL
             </label>
             <div className="flex items-center space-x-2">
@@ -78,11 +78,11 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
                 type="text"
                 readOnly
                 value={meetingUrl}
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono text-slate-300 focus:outline-none"
+                className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs font-mono text-slate-800 focus:outline-hidden"
               />
               <button
                 onClick={handleCopyLink}
-                className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold transition-colors"
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-semibold transition-colors shadow-xs"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedLink ? 'Copied' : 'Copy'}</span>
@@ -92,67 +92,84 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
 
           {/* Quick Room Code */}
           <div>
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-1.5">
               Room Access Code
             </label>
             <div className="flex items-center space-x-2">
-              <div className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-mono font-bold text-cyan-400 tracking-wider">
+              <div className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-blue-700 tracking-wider">
                 {roomCode}
               </div>
               <button
                 onClick={handleCopyCode}
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0f172a] text-xs font-semibold transition-colors"
               >
-                {copiedCode ? 'Copied' : 'Copy Code'}
+                {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
               </button>
             </div>
           </div>
 
-          {/* Email Invite Dispatch */}
-          <form onSubmit={handleSendInvite} className="space-y-3 pt-2 border-t border-slate-800">
-            <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block">
-              Direct Invite via Email
+          {/* Role-Based Email Invite */}
+          <form onSubmit={handleSendInvite} className="space-y-3 pt-2">
+            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">
+              Direct Role-Based Invite
             </label>
+
             <div className="grid grid-cols-3 gap-2">
-              <input
-                type="email"
-                placeholder="colleague@company.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                className="col-span-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-violet-500"
-              />
-              <select
-                value={selectedRole}
-                onChange={(e) => setSelectedRole(e.target.value as any)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-2 py-2 text-xs text-slate-300 focus:outline-none"
-              >
-                <option value="developer">Developer</option>
-                <option value="investor">Investor / VC</option>
-                <option value="business-partner">Partner</option>
-              </select>
+              {(['developer', 'investor', 'business-partner'] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setSelectedRole(r)}
+                  className={`py-2 px-2.5 rounded-xl text-xs font-medium capitalize transition-all ${
+                    selectedRole === r
+                      ? 'bg-[#0f172a] text-white font-bold shadow-xs'
+                      : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
+                  }`}
+                >
+                  {r.replace('-', ' ')}
+                </button>
+              ))}
             </div>
 
-            <button
-              type="submit"
-              disabled={!inviteEmail.trim()}
-              className="w-full py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-bold transition-all disabled:opacity-40"
-            >
-              Send Direct Room Invite
-            </button>
+            <div className="flex items-center space-x-2">
+              <input
+                type="email"
+                placeholder="colleague@syndicate.io"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-hidden focus:ring-1 focus:ring-[#0f172a]"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-xs flex items-center space-x-1.5"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>Send</span>
+              </button>
+            </div>
           </form>
 
-          {/* Invited list */}
+          {/* Dispatched Invites List */}
           {invitedList.length > 0 && (
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
-              <span className="text-[11px] font-semibold text-slate-400">Dispatched Invites:</span>
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5">
+              <span className="text-[11px] font-bold text-slate-500 uppercase">Invites Sent in Session:</span>
               {invitedList.map((inv, idx) => (
-                <div key={idx} className="text-xs text-emerald-400 flex items-center space-x-1.5">
-                  <Check className="w-3 h-3" />
+                <div key={idx} className="flex items-center justify-between text-xs text-slate-700">
                   <span>{inv}</span>
+                  <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">
+                    Pass Dispatched
+                  </span>
                 </div>
               ))}
             </div>
           )}
+
+          {/* Footer note */}
+          <div className="pt-2 border-t border-slate-100 flex items-center space-x-2 text-[11px] text-slate-500">
+            <Shield className="w-3.5 h-3.5 text-blue-600" />
+            <span>Invitations require OAuth verification (Google, GitHub, or Discord).</span>
+          </div>
         </div>
       </div>
     </div>

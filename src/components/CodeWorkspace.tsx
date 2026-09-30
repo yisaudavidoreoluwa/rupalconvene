@@ -40,7 +40,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     {
       id: 'init-1',
       type: 'system',
-      text: '[TechConvene Sandbox Engine v2.4 initialized. Ready for collaborative execution.]',
+      text: '[Rupal Convene Sandbox Engine v2.4 initialized. Ready for collaborative execution.]',
       timestamp: '14:30:00',
     },
   ]);
@@ -113,9 +113,9 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   });
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none">
       {/* Top Bar: File Tabs & Action Controls (White Background with Navy Blue Accents) */}
-      <div className="h-12 bg-white border-b border-slate-200 px-3 flex items-center justify-between">
+      <div className="h-12 bg-white border-b border-slate-100 px-3 flex items-center justify-between">
         {/* Left: Tab list */}
         <div className="flex items-center space-x-1 overflow-x-auto py-1">
           {files.map((file) => {

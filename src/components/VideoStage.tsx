@@ -40,7 +40,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
     <div className="relative w-full h-full flex flex-col p-2 sm:p-4 overflow-hidden bg-[#f8fafc]">
       {/* Green Room Alert Bar for Stage Hosts */}
       {greenRoomParticipants.length > 0 && !compactMode && (
-        <div className="mb-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-center justify-between shadow-sm">
+        <div className="mb-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200/70 text-amber-900 flex items-center justify-between shadow-xs">
           <div className="flex items-center space-x-2.5 text-xs sm:text-sm">
             <span className="flex h-2.5 w-2.5 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
@@ -57,7 +57,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               <button
                 key={p.id}
                 onClick={() => onAdmitFromGreenRoom(p.id)}
-                className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs transition-colors shadow-sm"
+                className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs transition-colors shadow-xs"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>Admit {p.name.split(' ')[0]}</span>

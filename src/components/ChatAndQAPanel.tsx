@@ -57,10 +57,10 @@ export const ChatAndQAPanel: React.FC<ChatAndQAPanelProps> = ({
   });
 
   return (
-    <div className="w-80 sm:w-96 h-full flex flex-col bg-white border-l border-slate-200 shadow-xl z-20 select-none">
+    <div className="w-80 sm:w-96 h-full flex flex-col bg-white border-l border-slate-100 shadow-lg z-20 select-none">
       {/* Panel Header */}
-      <div className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between">
-        <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
+      <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between">
+        <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-xl text-xs font-semibold">
           <button
             onClick={() => setActiveTab('chat')}
             className={`flex items-center space-x-1.5 px-3 py-1 rounded-md transition-colors ${

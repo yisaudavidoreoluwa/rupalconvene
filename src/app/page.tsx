@@ -14,6 +14,9 @@ import { ConferenceControls } from '@/components/ConferenceControls';
 import { DealRoomModal } from '@/components/DealRoomModal';
 import { InviteModal } from '@/components/InviteModal';
 import { LeaveModal } from '@/components/LeaveModal';
+import { AuthModal } from '@/components/AuthModal';
+import { DocumentationModal } from '@/components/DocumentationModal';
+import { AuthProviderComponent, useAuth } from '@/context/AuthContext';
 
 import { 
   Participant, 
@@ -39,8 +42,19 @@ import {
 } from '@/lib/mock-data';
 
 export default function Home() {
-  // Lobby gate: When true, shows Google Meet "Ready to join?" lobby; when false, in live conference call
-  const [inLobby, setInLobby] = useState(false); // default directly to active conference room or lobby
+  return (
+    <AuthProviderComponent>
+      <ConferenceApp />
+      <AuthModal />
+    </AuthProviderComponent>
+  );
+}
+
+function ConferenceApp() {
+  const { user } = useAuth();
+
+  // Lobby gate: When true, shows "Ready to join?" lobby; when false, in live conference call
+  const [inLobby, setInLobby] = useState(false);
 
   // Conference Suite State
   const [roomCode, setRoomCode] = useState('RUPAL-901-SYNC');
@@ -56,6 +70,7 @@ export default function Home() {
   const [isDealRoomOpen, setIsDealRoomOpen] = useState(false);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [isDocsOpen, setIsDocsOpen] = useState(false);
 
   // Data Collections
   const [participants, setParticipants] = useState<Participant[]>(INITIAL_PARTICIPANTS);
@@ -93,6 +108,28 @@ export default function Home() {
       timestamp: '14:33',
     },
   ]);
+
+  // Synchronize authenticated user profile with local participant state
+  useEffect(() => {
+    if (user) {
+      setParticipants((prev) =>
+        prev.map((p) => {
+          if (p.id === 'user-self') {
+            return {
+              ...p,
+              name: user.name,
+              email: user.email,
+              avatar: user.avatar,
+              role: user.role,
+              jobTitle: user.jobTitle,
+              organization: user.organization,
+            };
+          }
+          return p;
+        })
+      );
+    }
+  }, [user]);
 
   // Local media stream reference
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -284,25 +321,32 @@ export default function Home() {
   // If in Pre-Join Lobby screen
   if (inLobby) {
     return (
-      <PreJoinLobby
-        roomCode={roomCode}
-        meetingTitle={meetingTitle}
-        participants={participants}
-        currentUser={currentUser}
-        onJoinMeeting={(startTab) => {
-          if (startTab) setActiveTab(startTab);
-          setInLobby(false);
-        }}
-        onToggleMic={handleToggleMic}
-        onToggleVideo={handleToggleVideo}
-      />
+      <>
+        <PreJoinLobby
+          roomCode={roomCode}
+          meetingTitle={meetingTitle}
+          participants={participants}
+          currentUser={currentUser}
+          onJoinMeeting={(startTab) => {
+            if (startTab) setActiveTab(startTab);
+            setInLobby(false);
+          }}
+          onToggleMic={handleToggleMic}
+          onToggleVideo={handleToggleVideo}
+          onOpenDocs={() => setIsDocsOpen(true)}
+        />
+        <DocumentationModal
+          isOpen={isDocsOpen}
+          onClose={() => setIsDocsOpen(false)}
+        />
+      </>
     );
   }
 
-  // Active In-Call Conference Suite
+  // Active In-Call Conference Suite (White Background & Deep Navy Blue)
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#202124] text-[#e8eaed] font-sans selection:bg-[#1a73e8] selection:text-white">
-      {/* 1. Google Meet Styled Header */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+      {/* 1. Rupal Convene Clean Header */}
       <ConferenceHeader
         title={meetingTitle}
         roomCode={roomCode}
@@ -314,12 +358,13 @@ export default function Home() {
         isRecording={isRecording}
         onToggleRecording={() => setIsRecording(!isRecording)}
         onOpenInvite={() => setIsInviteOpen(true)}
+        onOpenDocs={() => setIsDocsOpen(true)}
         onBackToPortal={() => setInLobby(true)}
       />
 
-      {/* 2. Central Meeting Workspace */}
+      {/* 2. Central Meeting Workspace (Light Canvas #f8fafc with Low Border Clutter) */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-2 md:p-3 gap-2 md:gap-3 bg-[#202124]">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]">
           {/* Main Stage View */}
           {activeTab === 'stage' && (
             <div className="flex-1 w-full h-full">
@@ -458,7 +503,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* 3. Iconic Google Meet Floating Bottom Bar */}
+      {/* 3. Floating Bottom Controls Dock */}
       <ConferenceControls
         currentUser={currentUser}
         activeTab={activeTab}
@@ -476,7 +521,7 @@ export default function Home() {
         roomCode={roomCode}
       />
 
-      {/* Modals */}
+      {/* Modals & Drawers */}
       <DealRoomModal
         isOpen={isDealRoomOpen}
         onClose={() => setIsDealRoomOpen(false)}
@@ -496,6 +541,11 @@ export default function Home() {
           alert('Conference ended by Host. Executive minutes dispatched to all partner emails.');
           setInLobby(true);
         }}
+      />
+
+      <DocumentationModal
+        isOpen={isDocsOpen}
+        onClose={() => setIsDocsOpen(false)}
       />
     </div>
   );

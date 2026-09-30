@@ -128,9 +128,9 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none">
       {/* Drawer Top Navigation */}
-      <div className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between">
+      <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <div className="p-1 rounded-lg bg-blue-50 text-blue-700">
             <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
@@ -141,7 +141,7 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
         </div>
 
         {/* Tab buttons */}
-        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-xl text-xs font-semibold">
           <button
             onClick={() => setActiveTab('minutes')}
             className={`px-3 py-1 rounded-md transition-colors ${

@@ -41,10 +41,10 @@ export const AgendaGreenRoom: React.FC<AgendaGreenRoomProps> = ({
   };
 
   return (
-    <div className="w-full h-full flex flex-col md:flex-row bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
+    <div className="w-full h-full flex flex-col md:flex-row bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none">
       {/* Left Column: Conference Agenda Tracks (White & Navy) */}
-      <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-slate-200">
-        <div className="h-14 bg-white border-b border-slate-200 px-5 flex items-center justify-between">
+      <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-slate-100">
+        <div className="h-14 bg-white border-b border-slate-100 px-5 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-blue-700" />
             <h3 className="text-sm font-extrabold text-[#0f172a] tracking-wide">
