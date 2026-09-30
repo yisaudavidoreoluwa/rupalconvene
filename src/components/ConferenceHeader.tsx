@@ -13,7 +13,9 @@ import {
   Sparkles,
   Share2,
   Eye,
-  EyeOff
+  EyeOff,
+  Home,
+  ArrowLeft
 } from 'lucide-react';
 import { StageLayout, Participant } from '@/types/meeting';
 
@@ -28,6 +30,7 @@ interface ConferenceHeaderProps {
   isRecording: boolean;
   onToggleRecording: () => void;
   onOpenInvite: () => void;
+  onBackToPortal?: () => void;
 }
 
 export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
@@ -41,6 +44,7 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   isRecording,
   onToggleRecording,
   onOpenInvite,
+  onBackToPortal,
 }) => {
   const [copied, setCopied] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(1485); // 24m 45s initially
@@ -63,7 +67,7 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(`https://techconvene.io/meet/${roomCode}`);
+    navigator.clipboard.writeText(`https://rupal.tech/convene/${roomCode}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -75,19 +79,32 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
     <header className="h-16 px-4 md:px-6 bg-slate-900/90 border-b border-slate-800/80 flex items-center justify-between select-none relative z-30 backdrop-blur-md">
       {/* Left: Branding & Session Info */}
       <div className="flex items-center space-x-3 md:space-x-4">
+        {onBackToPortal && (
+          <button
+            onClick={onBackToPortal}
+            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors border border-slate-700/60"
+            title="Return to Rupal Tech Solutions Portal"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Portal</span>
+          </button>
+        )}
+
         <div className="flex items-center space-x-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-400 p-[1px] shadow-lg shadow-violet-500/20">
-            <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-cyan-400" />
-            </div>
+          {/* Rupal colorful logo box */}
+          <div className="w-8 h-8 rounded-lg bg-white border border-slate-700 shadow-md flex items-center justify-center p-1">
+            <span className="font-extrabold text-lg bg-gradient-to-tr from-blue-600 via-emerald-500 to-amber-500 bg-clip-text text-transparent">
+              R
+            </span>
           </div>
+
           <div>
             <div className="flex items-center space-x-2">
               <span className="font-bold text-base tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                TechConvene
+                Rupal Convene
               </span>
-              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                Enterprise SaaS
+              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                Enterprise
               </span>
             </div>
             <div className="text-xs text-slate-400 flex items-center space-x-2">
@@ -188,7 +205,7 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
         {/* Invite Button */}
         <button
           onClick={onOpenInvite}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-medium shadow-md shadow-violet-500/20 transition-all active:scale-95"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-blue-500/20 transition-all active:scale-95"
         >
           <Share2 className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Invite Partners</span>

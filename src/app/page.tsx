@@ -1,6 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { RupalHeader } from '@/components/RupalHeader';
+import { RupalSubNav } from '@/components/RupalSubNav';
+import { RupalHero } from '@/components/RupalHero';
+import { RupalAIFeatureSection } from '@/components/RupalAIFeatureSection';
+import { RupalDeviceSection } from '@/components/RupalDeviceSection';
+import { RupalFooter } from '@/components/RupalFooter';
+import { RupalChatWidget } from '@/components/RupalChatWidget';
+
+// Full In-Meeting Real-World Conference Suite Components
 import { ConferenceHeader } from '@/components/ConferenceHeader';
 import { VideoStage } from '@/components/VideoStage';
 import { CodeWorkspace } from '@/components/CodeWorkspace';
@@ -38,9 +47,13 @@ import {
 } from '@/lib/mock-data';
 
 export default function Home() {
-  // Conference State
-  const [roomCode] = useState('TECHCONVENE-901-SYNC');
-  const [meetingTitle] = useState('Synthetix Architecture & Series B Syndicate Review');
+  // Navigation mode: 'portal' (Rupal Tech Solutions Product Landing Page) vs 'meeting' (Live In-Meeting Conference Suite)
+  const [viewMode, setViewMode] = useState<'portal' | 'meeting'>('portal');
+  const [activePill, setActivePill] = useState('ai');
+
+  // Conference Suite State
+  const [roomCode, setRoomCode] = useState('RUPAL-901-SYNC');
+  const [meetingTitle, setMeetingTitle] = useState('Synthetix Architecture & Series B Syndicate Review');
   const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('stage');
   const [layout, setLayout] = useState<StageLayout>('gallery');
   const [isWatermarkActive, setIsWatermarkActive] = useState(true);
@@ -53,7 +66,7 @@ export default function Home() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
 
-  // Core Data
+  // Data Collections
   const [participants, setParticipants] = useState<Participant[]>(INITIAL_PARTICIPANTS);
   const [files, setFiles] = useState<CodeFile[]>(INITIAL_FILES);
   const [activeFileId, setActiveFileId] = useState<string>('gateway-ts');
@@ -77,7 +90,7 @@ export default function Home() {
       speakerId: 'user-self',
       speakerName: 'Alex Vance',
       speakerRole: 'tech-lead',
-      text: 'Understood Elena. I am bringing up our live gateway rate-limiting implementation right now in the In-Call IDE.',
+      text: 'Understood Elena. I am running our live gateway rate-limiting implementation right now in the In-Call IDE.',
       timestamp: '14:32',
     },
     {
@@ -100,7 +113,7 @@ export default function Home() {
   useEffect(() => {
     async function setupCamera() {
       try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && viewMode === 'meeting') {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: true,
             audio: true,
@@ -111,21 +124,24 @@ export default function Home() {
           }
         }
       } catch (err) {
-        // Fallback to high-fidelity avatar mode if camera not granted or unavailable
-        console.info('Camera access not available or permission deferred, using high-definition stream preview.', err);
+        console.info('Camera permission deferred or running in sandbox preview.', err);
       }
     }
-    setupCamera();
+    if (viewMode === 'meeting') {
+      setupCamera();
+    }
 
     return () => {
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       }
     };
-  }, []);
+  }, [viewMode]);
 
   // Speaker simulation to give real conference feel
   useEffect(() => {
+    if (viewMode !== 'meeting') return;
+
     const interval = setInterval(() => {
       const activeStageParticipants = participants.filter((p) => !p.inGreenRoom);
       if (activeStageParticipants.length > 0) {
@@ -140,7 +156,16 @@ export default function Home() {
     }, 6000);
 
     return () => clearInterval(interval);
-  }, [participants]);
+  }, [participants, viewMode]);
+
+  // Meeting enter handler
+  const handleLaunchMeeting = (code?: string) => {
+    if (code) {
+      setRoomCode(`RUPAL-${code.toUpperCase()}`);
+    }
+    setViewMode('meeting');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Audio/Video Toggles
   const handleToggleMic = () => {
@@ -180,7 +205,6 @@ export default function Home() {
       prev.map((p) => (p.id === participantId ? { ...p, inGreenRoom: false } : p))
     );
     if (admitted) {
-      // Add announcement to chat and transcript
       const newMsg: ChatMessage = {
         id: `msg-${Date.now()}`,
         senderId: 'system',
@@ -228,7 +252,6 @@ export default function Home() {
     };
     setChatMessages((prev) => [...prev, newMsg]);
 
-    // Also record in transcription
     setCaptions((prev) => [
       ...prev,
       {
@@ -276,205 +299,256 @@ export default function Home() {
     setIsChatOpen(true);
   };
 
-  const handleAskAIAboutCode = (fileName: string, code: string) => {
-    setActiveTab('ai-intelligence');
-  };
-
-  const handleAskAIAboutArchitecture = (elements: WhiteboardElement[]) => {
-    setActiveTab('ai-intelligence');
-  };
-
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 font-sans selection:bg-violet-500 selection:text-white">
-      {/* 1. Header */}
-      <ConferenceHeader
-        title={meetingTitle}
-        roomCode={roomCode}
-        participants={participants}
-        layout={layout}
-        onLayoutChange={setLayout}
-        isWatermarkActive={isWatermarkActive}
-        onToggleWatermark={() => setIsWatermarkActive(!isWatermarkActive)}
-        isRecording={isRecording}
-        onToggleRecording={() => setIsRecording(!isRecording)}
-        onOpenInvite={() => setIsInviteOpen(true)}
-      />
+    <>
+      {/* VIEW 1: Rupal Tech Solutions Marketing Portal (Matching Uploaded Screenshots) */}
+      {viewMode === 'portal' && (
+        <div className="min-h-screen bg-white text-slate-900 flex flex-col font-sans">
+          {/* Top Navbar */}
+          <RupalHeader
+            onStartMeeting={() => handleLaunchMeeting()}
+            onSignIn={() => alert("Rupal Tech Solutions Single Sign-On (SSO) Portal")}
+          />
 
-      {/* 2. Main Middle Workspace Area */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Central Workspace Canvas */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-2 md:p-3 gap-2 md:gap-3">
-          {/* Main Stage View */}
-          {activeTab === 'stage' && (
-            <div className="flex-1 w-full h-full">
-              <VideoStage
-                participants={participants}
-                layout={layout}
-                onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
-                onMoveToGreenRoom={handleMoveToGreenRoom}
-                localVideoRef={localVideoRef}
-              />
-            </div>
-          )}
+          {/* Subnav Pill Bar */}
+          <RupalSubNav
+            activePill={activePill}
+            onSelectPill={(pill) => {
+              setActivePill(pill);
+              if (pill === 'ai') {
+                document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+              } else if (pill === 'flexible') {
+                document.getElementById('devices')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+          />
 
-          {/* Collaborative Code Workspace (With optional split video stage) */}
-          {activeTab === 'code-ide' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
-              <div className="flex-1 h-full min-h-0">
-                <CodeWorkspace
-                  files={files}
-                  activeFileId={activeFileId}
-                  onSelectFile={setActiveFileId}
-                  onUpdateFileContent={handleUpdateFileContent}
-                  onShareToChat={handleShareCodeToChat}
-                  onAskAIAboutCode={handleAskAIAboutCode}
-                />
-              </div>
-
-              {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
-                  <VideoStage
-                    participants={participants}
-                    layout="gallery"
-                    compactMode={true}
-                    onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
-                    onMoveToGreenRoom={handleMoveToGreenRoom}
-                    localVideoRef={localVideoRef}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Architecture Whiteboard (With optional split video stage) */}
-          {activeTab === 'whiteboard' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
-              <div className="flex-1 h-full min-h-0">
-                <ArchitectureWhiteboard
-                  elements={whiteboardElements}
-                  onUpdateElements={setWhiteboardElements}
-                  onAskAIAboutArchitecture={handleAskAIAboutArchitecture}
-                />
-              </div>
-
-              {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
-                  <VideoStage
-                    participants={participants}
-                    layout="gallery"
-                    compactMode={true}
-                    onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
-                    onMoveToGreenRoom={handleMoveToGreenRoom}
-                    localVideoRef={localVideoRef}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Investor Pitch Deck (With optional split video stage & watermark) */}
-          {activeTab === 'pitch-deck' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
-              <div className="flex-1 h-full min-h-0">
-                <PitchDeckViewer
-                  slides={slides}
-                  currentSlideIndex={currentSlideIndex}
-                  onSlideChange={setCurrentSlideIndex}
-                  isWatermarkActive={isWatermarkActive}
-                  currentUser={currentUser}
-                  onOpenDealRoom={() => setIsDealRoomOpen(true)}
-                />
-              </div>
-
-              {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
-                  <VideoStage
-                    participants={participants}
-                    layout="gallery"
-                    compactMode={true}
-                    onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
-                    onMoveToGreenRoom={handleMoveToGreenRoom}
-                    localVideoRef={localVideoRef}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Conference Timetable & Backstage Green Room */}
-          {activeTab === 'agenda' && (
-            <div className="flex-1 w-full h-full">
-              <AgendaGreenRoom
-                agenda={agenda}
-                participants={participants}
-                onAdmitToStage={handleAdmitFromGreenRoom}
-                onMoveToGreenRoom={handleMoveToGreenRoom}
-              />
-            </div>
-          )}
-
-          {/* Gemini AI Live Meeting Intelligence & Minutes */}
-          {activeTab === 'ai-intelligence' && (
-            <div className="flex-1 w-full h-full">
-              <AIIntelligenceDrawer
-                minutes={minutes}
-                onUpdateMinutes={setMinutes}
-                captions={captions}
-                activeCodeSnippet={files.find((f) => f.id === activeFileId)?.content}
-                currentSlideTitle={slides[currentSlideIndex]?.title}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Right Collapsible Chat / Q&A / Attendance Drawer */}
-        {isChatOpen && (
-          <div className="h-full flex-shrink-0 animate-in slide-in-from-right duration-200">
-            <ChatAndQAPanel
-              messages={chatMessages}
-              participants={participants}
-              currentUser={currentUser}
-              onSendMessage={handleSendMessage}
-              onUpvoteQuestion={handleUpvoteQuestion}
-              onClose={() => setIsChatOpen(false)}
+          {/* Main Hero Section with Interactive Video Meeting Preview */}
+          <main className="flex-1">
+            <RupalHero
+              onJoinMeeting={(code) => handleLaunchMeeting(code)}
+              onEnterFullWorkspace={() => handleLaunchMeeting()}
+              onSignIn={() => alert("Sign in with Rupal Tech Account")}
             />
+
+            {/* AI-Enhanced Meetings Section (Image 3) */}
+            <RupalAIFeatureSection
+              onExploreAI={() => handleLaunchMeeting()}
+            />
+
+            {/* Meet on Any Device Section (Image 4) */}
+            <RupalDeviceSection
+              onLaunchInBrowser={() => handleLaunchMeeting()}
+            />
+          </main>
+
+          {/* Footer */}
+          <RupalFooter />
+
+          {/* Floating Bottom-Right Chat Bubble Widget */}
+          <RupalChatWidget
+            onStartMeeting={() => handleLaunchMeeting()}
+          />
+        </div>
+      )}
+
+      {/* VIEW 2: Full-Scale In-Meeting Real-World Conference Suite */}
+      {viewMode === 'meeting' && (
+        <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#090d16] text-slate-100 font-sans selection:bg-violet-500 selection:text-white dark-workspace">
+          {/* Header */}
+          <ConferenceHeader
+            title={meetingTitle}
+            roomCode={roomCode}
+            participants={participants}
+            layout={layout}
+            onLayoutChange={setLayout}
+            isWatermarkActive={isWatermarkActive}
+            onToggleWatermark={() => setIsWatermarkActive(!isWatermarkActive)}
+            isRecording={isRecording}
+            onToggleRecording={() => setIsRecording(!isRecording)}
+            onOpenInvite={() => setIsInviteOpen(true)}
+            onBackToPortal={() => setViewMode('portal')}
+          />
+
+          {/* Central Workspace Area */}
+          <div className="flex-1 flex overflow-hidden relative">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-2 md:p-3 gap-2 md:gap-3">
+              {/* Main Stage View */}
+              {activeTab === 'stage' && (
+                <div className="flex-1 w-full h-full">
+                  <VideoStage
+                    participants={participants}
+                    layout={layout}
+                    onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
+                    onMoveToGreenRoom={handleMoveToGreenRoom}
+                    localVideoRef={localVideoRef}
+                  />
+                </div>
+              )}
+
+              {/* Collaborative Code Workspace (With split video stage) */}
+              {activeTab === 'code-ide' && (
+                <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+                  <div className="flex-1 h-full min-h-0">
+                    <CodeWorkspace
+                      files={files}
+                      activeFileId={activeFileId}
+                      onSelectFile={setActiveFileId}
+                      onUpdateFileContent={handleUpdateFileContent}
+                      onShareToChat={handleShareCodeToChat}
+                      onAskAIAboutCode={() => setActiveTab('ai-intelligence')}
+                    />
+                  </div>
+
+                  {splitVideoEnabled && (
+                    <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                      <VideoStage
+                        participants={participants}
+                        layout="gallery"
+                        compactMode={true}
+                        onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
+                        onMoveToGreenRoom={handleMoveToGreenRoom}
+                        localVideoRef={localVideoRef}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Architecture Whiteboard (With split video stage) */}
+              {activeTab === 'whiteboard' && (
+                <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+                  <div className="flex-1 h-full min-h-0">
+                    <ArchitectureWhiteboard
+                      elements={whiteboardElements}
+                      onUpdateElements={setWhiteboardElements}
+                      onAskAIAboutArchitecture={() => setActiveTab('ai-intelligence')}
+                    />
+                  </div>
+
+                  {splitVideoEnabled && (
+                    <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                      <VideoStage
+                        participants={participants}
+                        layout="gallery"
+                        compactMode={true}
+                        onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
+                        onMoveToGreenRoom={handleMoveToGreenRoom}
+                        localVideoRef={localVideoRef}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Investor Pitch Deck (With privacy watermark & split video) */}
+              {activeTab === 'pitch-deck' && (
+                <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+                  <div className="flex-1 h-full min-h-0">
+                    <PitchDeckViewer
+                      slides={slides}
+                      currentSlideIndex={currentSlideIndex}
+                      onSlideChange={setCurrentSlideIndex}
+                      isWatermarkActive={isWatermarkActive}
+                      currentUser={currentUser}
+                      onOpenDealRoom={() => setIsDealRoomOpen(true)}
+                    />
+                  </div>
+
+                  {splitVideoEnabled && (
+                    <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                      <VideoStage
+                        participants={participants}
+                        layout="gallery"
+                        compactMode={true}
+                        onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
+                        onMoveToGreenRoom={handleMoveToGreenRoom}
+                        localVideoRef={localVideoRef}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Conference Timetable & Backstage Green Room */}
+              {activeTab === 'agenda' && (
+                <div className="flex-1 w-full h-full">
+                  <AgendaGreenRoom
+                    agenda={agenda}
+                    participants={participants}
+                    onAdmitToStage={handleAdmitFromGreenRoom}
+                    onMoveToGreenRoom={handleMoveToGreenRoom}
+                  />
+                </div>
+              )}
+
+              {/* Gemini AI Live Meeting Intelligence */}
+              {activeTab === 'ai-intelligence' && (
+                <div className="flex-1 w-full h-full">
+                  <AIIntelligenceDrawer
+                    minutes={minutes}
+                    onUpdateMinutes={setMinutes}
+                    captions={captions}
+                    activeCodeSnippet={files.find((f) => f.id === activeFileId)?.content}
+                    currentSlideTitle={slides[currentSlideIndex]?.title}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Right Collapsible Chat / Q&A / Attendance Drawer */}
+            {isChatOpen && (
+              <div className="h-full flex-shrink-0 animate-in slide-in-from-right duration-200">
+                <ChatAndQAPanel
+                  messages={chatMessages}
+                  participants={participants}
+                  currentUser={currentUser}
+                  onSendMessage={handleSendMessage}
+                  onUpvoteQuestion={handleUpvoteQuestion}
+                  onClose={() => setIsChatOpen(false)}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      {/* 3. Bottom Conference Controls Bar */}
-      <ConferenceControls
-        currentUser={currentUser}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onToggleMic={handleToggleMic}
-        onToggleVideo={handleToggleVideo}
-        onToggleScreenShare={handleToggleScreenShare}
-        onToggleHandRaise={handleToggleHandRaise}
-        isChatOpen={isChatOpen}
-        onToggleChat={() => setIsChatOpen(!isChatOpen)}
-        onLeaveMeeting={() => setIsLeaveOpen(true)}
-        unreadCount={chatMessages.length > 3 ? 1 : 0}
-      />
+          {/* Bottom Conference Controls Bar */}
+          <ConferenceControls
+            currentUser={currentUser}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onToggleMic={handleToggleMic}
+            onToggleVideo={handleToggleVideo}
+            onToggleScreenShare={handleToggleScreenShare}
+            onToggleHandRaise={handleToggleHandRaise}
+            isChatOpen={isChatOpen}
+            onToggleChat={() => setIsChatOpen(!isChatOpen)}
+            onLeaveMeeting={() => setIsLeaveOpen(true)}
+            unreadCount={chatMessages.length > 3 ? 1 : 0}
+          />
 
-      {/* Modals */}
-      <DealRoomModal
-        isOpen={isDealRoomOpen}
-        onClose={() => setIsDealRoomOpen(false)}
-      />
+          {/* Modals */}
+          <DealRoomModal
+            isOpen={isDealRoomOpen}
+            onClose={() => setIsDealRoomOpen(false)}
+          />
 
-      <InviteModal
-        isOpen={isInviteOpen}
-        onClose={() => setIsInviteOpen(false)}
-        roomCode={roomCode}
-      />
+          <InviteModal
+            isOpen={isInviteOpen}
+            onClose={() => setIsInviteOpen(false)}
+            roomCode={roomCode}
+          />
 
-      <LeaveModal
-        isOpen={isLeaveOpen}
-        onClose={() => setIsLeaveOpen(false)}
-        onConfirmLeave={() => alert('You left the meeting. You can rejoin using your room link at any time.')}
-        onEndMeetingForAll={() => alert('Conference ended by Host. Executive minutes have been dispatched to all partner emails.')}
-      />
-    </div>
+          <LeaveModal
+            isOpen={isLeaveOpen}
+            onClose={() => setIsLeaveOpen(false)}
+            onConfirmLeave={() => setViewMode('portal')}
+            onEndMeetingForAll={() => {
+              alert('Conference ended by Host. Executive minutes dispatched to all partner emails.');
+              setViewMode('portal');
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 }
