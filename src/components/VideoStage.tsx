@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { VideoTile } from './VideoTile';
 import { Participant, StageLayout } from '@/types/meeting';
-import { UserCheck, Sparkles, AlertCircle } from 'lucide-react';
+import { UserCheck, Sparkles } from 'lucide-react';
 
 interface VideoStageProps {
   participants: Participant[];
@@ -11,7 +11,7 @@ interface VideoStageProps {
   onAdmitFromGreenRoom: (participantId: string) => void;
   onMoveToGreenRoom: (participantId: string) => void;
   localVideoRef?: React.RefObject<HTMLVideoElement | null>;
-  compactMode?: boolean; // For when IDE or Whiteboard is open side-by-side
+  compactMode?: boolean;
 }
 
 export const VideoStage: React.FC<VideoStageProps> = ({
@@ -27,7 +27,6 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   const stageParticipants = participants.filter((p) => !p.inGreenRoom);
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
 
-  // Active speaker or pinned participant
   const primaryParticipant = 
     stageParticipants.find((p) => p.id === pinnedId) ||
     stageParticipants.find((p) => p.isSpeaking) ||
@@ -38,19 +37,17 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   );
 
   return (
-    <div className="relative w-full h-full flex flex-col p-3 md:p-4 overflow-hidden">
-      {/* Green Room Notification Banner for Stage Admins */}
+    <div className="relative w-full h-full flex flex-col p-2 sm:p-4 overflow-hidden bg-[#202124]">
+      {/* Green Room Alert Bar for Stage Hosts */}
       {greenRoomParticipants.length > 0 && !compactMode && (
-        <div className="mb-3 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-center justify-between shadow-lg backdrop-blur-md">
-          <div className="flex items-center space-x-3 text-xs md:text-sm">
+        <div className="mb-3 px-4 py-2 rounded-xl bg-[#2d2f31] border border-[#f9ab00]/40 text-[#fdd663] flex items-center justify-between shadow-lg">
+          <div className="flex items-center space-x-2.5 text-xs sm:text-sm">
             <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f9ab00] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#f9ab00]"></span>
             </span>
-            <span className="font-semibold text-amber-300">
-              Backstage Green Room:
-            </span>
-            <span className="text-slate-300 hidden sm:inline">
+            <span className="font-semibold text-white">Backstage Green Room:</span>
+            <span className="text-[#9aa0a6] hidden sm:inline">
               {greenRoomParticipants.map((p) => `${p.name} (${p.jobTitle})`).join(', ')}
             </span>
           </div>
@@ -60,7 +57,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               <button
                 key={p.id}
                 onClick={() => onAdmitFromGreenRoom(p.id)}
-                className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-xs transition-colors shadow-sm"
+                className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#f9ab00] hover:bg-[#f29900] text-slate-950 font-bold text-xs transition-colors shadow-sm"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>Admit {p.name.split(' ')[0]}</span>
@@ -70,10 +67,10 @@ export const VideoStage: React.FC<VideoStageProps> = ({
         </div>
       )}
 
-      {/* Main Video Layout Rendering */}
+      {/* Video Tile Layout */}
       {compactMode ? (
-        /* Compact Vertical/Horizontal Ribbon for Split Workspace */
-        <div className="w-full flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[300px] md:max-h-full pb-2">
+        /* Compact Vertical Ribbon when Code IDE or Whiteboard is open */
+        <div className="w-full flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[280px] md:max-h-full pb-2">
           {stageParticipants.map((p) => (
             <div key={p.id} className="min-w-[200px] md:min-w-0 md:w-full h-36 flex-shrink-0">
               <VideoTile
@@ -87,7 +84,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           ))}
         </div>
       ) : layout === 'speaker-focus' && primaryParticipant ? (
-        /* Speaker Spotlight Mode */
+        /* Spotlight Mode */
         <div className="flex-1 flex flex-col gap-3 min-h-0">
           <div className="flex-1 min-h-0 relative">
             <VideoTile
@@ -99,7 +96,6 @@ export const VideoStage: React.FC<VideoStageProps> = ({
             />
           </div>
 
-          {/* Bottom Thumbnails */}
           {secondaryParticipants.length > 0 && (
             <div className="h-32 sm:h-36 flex gap-3 overflow-x-auto py-1">
               {secondaryParticipants.map((p) => (
@@ -118,9 +114,9 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           )}
         </div>
       ) : (
-        /* Gallery Grid Mode */
+        /* Google Meet Multi-party Grid */
         <div 
-          className={`flex-1 grid gap-3.5 sm:gap-4 auto-rows-fr ${
+          className={`flex-1 grid gap-3 sm:gap-3.5 auto-rows-fr ${
             stageParticipants.length <= 1
               ? 'grid-cols-1'
               : stageParticipants.length === 2
@@ -131,7 +127,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           }`}
         >
           {stageParticipants.map((p) => (
-            <div key={p.id} className="w-full h-full min-h-[190px]">
+            <div key={p.id} className="w-full h-full min-h-[180px]">
               <VideoTile
                 participant={p}
                 isSelf={p.id === 'user-self'}

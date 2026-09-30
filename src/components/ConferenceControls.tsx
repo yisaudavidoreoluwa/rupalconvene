@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Mic, 
   MicOff, 
@@ -15,9 +15,12 @@ import {
   MessageSquare, 
   Hand, 
   PhoneOff, 
-  Shield, 
-  Settings,
-  Grid
+  ShieldCheck, 
+  Smile,
+  Subtitles,
+  Info,
+  Users,
+  Briefcase
 } from 'lucide-react';
 import { ActiveWorkspaceTab, Participant } from '@/types/meeting';
 
@@ -32,7 +35,10 @@ interface ConferenceControlsProps {
   isChatOpen: boolean;
   onToggleChat: () => void;
   onLeaveMeeting: () => void;
+  onOpenDealRoom: () => void;
+  participantCount?: number;
   unreadCount?: number;
+  roomCode?: string;
 }
 
 export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
@@ -46,177 +52,228 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   isChatOpen,
   onToggleChat,
   onLeaveMeeting,
+  onOpenDealRoom,
+  participantCount = 6,
   unreadCount = 0,
+  roomCode = 'RUPAL-901-SYNC',
 }) => {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [captionsActive, setCaptionsActive] = useState(true);
+  const [currentTime, setCurrentTime] = useState('14:35');
+
+  React.useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="h-20 bg-slate-900/90 border-t border-slate-800/80 px-4 flex items-center justify-between z-30 select-none backdrop-blur-lg">
-      {/* Left: AV Hardware Controls */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
-        {/* Microphone Toggle */}
+    <div className="h-20 bg-[#202124] border-t border-[#3c4043]/60 px-4 sm:px-6 flex items-center justify-between z-30 select-none">
+      {/* Left: Meeting Time & Room Identifier */}
+      <div className="hidden md:flex items-center space-x-3 text-sm font-medium text-[#e8eaed]">
+        <span className="font-mono text-xs text-[#9aa0a6]">{currentTime}</span>
+        <span className="text-[#5f6368]">|</span>
+        <span className="text-xs font-semibold text-[#e8eaed]">{roomCode}</span>
+        <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-[#2d2f31] border border-[#3c4043] text-[10px] text-[#81c995]">
+          <ShieldCheck className="w-3 h-3 text-[#81c995]" />
+          <span>Encrypted</span>
+        </div>
+      </div>
+
+      {/* Center: Iconic Google Meet Style Action Buttons */}
+      <div className="flex items-center space-x-2 sm:space-x-2.5 mx-auto md:mx-0">
+        {/* Mic */}
         <button
           onClick={onToggleMic}
-          className={`flex items-center space-x-2 px-3 sm:px-4 py-2.5 rounded-xl font-medium text-xs transition-all shadow-md active:scale-95 ${
+          className={`p-3 rounded-full transition-all shadow-md active:scale-95 ${
             currentUser.isMuted
-              ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 shadow-red-500/10'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+              ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
-          title={currentUser.isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
+          title={currentUser.isMuted ? 'Turn on microphone' : 'Turn off microphone'}
         >
-          {currentUser.isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4 text-emerald-400" />}
-          <span className="hidden md:inline">{currentUser.isMuted ? 'Muted' : 'Mute'}</span>
+          {currentUser.isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
         </button>
 
-        {/* Camera Toggle */}
+        {/* Video */}
         <button
           onClick={onToggleVideo}
-          className={`flex items-center space-x-2 px-3 sm:px-4 py-2.5 rounded-xl font-medium text-xs transition-all shadow-md active:scale-95 ${
+          className={`p-3 rounded-full transition-all shadow-md active:scale-95 ${
             currentUser.isVideoOff
-              ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 shadow-red-500/10'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+              ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
-          title={currentUser.isVideoOff ? 'Start Camera' : 'Stop Camera'}
+          title={currentUser.isVideoOff ? 'Turn on camera' : 'Turn off camera'}
         >
-          {currentUser.isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4 text-emerald-400" />}
-          <span className="hidden md:inline">{currentUser.isVideoOff ? 'Video Off' : 'Stop Video'}</span>
+          {currentUser.isVideoOff ? <VideoOff className="w-5 h-5" /> : <Video className="w-5 h-5" />}
         </button>
+
+        {/* Captions CC */}
+        <button
+          onClick={() => setCaptionsActive(!captionsActive)}
+          className={`p-3 rounded-full transition-colors hidden sm:inline-flex ${
+            captionsActive
+              ? 'bg-[#1a73e8] text-white'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
+          }`}
+          title="Turn on/off captions"
+        >
+          <Subtitles className="w-5 h-5" />
+        </button>
+
+        {/* Emoji Reactions Picker */}
+        <div className="relative hidden sm:inline-block">
+          <button
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            className="p-3 rounded-full bg-[#3c4043] text-white hover:bg-[#4a4e51] transition-colors"
+            title="Send a reaction"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          {showEmojiPicker && (
+            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-[#2d2f31] border border-[#3c4043] p-2 rounded-full flex items-center space-x-1 shadow-2xl z-50">
+              {['👍', '❤️', '👏', '🎉', '🚀', '🔥'].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => setShowEmojiPicker(false)}
+                  className="hover:scale-125 transition-transform text-lg p-1"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Screen Share */}
         <button
           onClick={onToggleScreenShare}
-          className={`flex items-center space-x-2 px-3 sm:px-4 py-2.5 rounded-xl font-medium text-xs transition-all shadow-md active:scale-95 ${
+          className={`p-3 rounded-full transition-colors ${
             currentUser.isScreenSharing
-              ? 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              ? 'bg-[#1a73e8] text-white'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
-          title="Share Screen"
+          title="Share screen"
         >
-          <ScreenShare className="w-4 h-4" />
-          <span className="hidden lg:inline">{currentUser.isScreenSharing ? 'Sharing' : 'Share Screen'}</span>
-        </button>
-      </div>
-
-      {/* Center: Collaborative Workspace Switcher */}
-      <div className="flex items-center bg-slate-950/80 p-1 rounded-2xl border border-slate-800 shadow-xl overflow-x-auto max-w-full">
-        {/* Main Stage */}
-        <button
-          onClick={() => onTabChange('stage')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'stage'
-              ? 'bg-slate-800 text-white shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Grid className="w-4 h-4" />
-          <span className="hidden sm:inline">Main Stage</span>
+          <ScreenShare className="w-5 h-5" />
         </button>
 
-        {/* Collaborative Code IDE */}
+        {/* In-Call Developer IDE */}
         <button
-          onClick={() => onTabChange('code-ide')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+          onClick={() => onTabChange(activeTab === 'code-ide' ? 'stage' : 'code-ide')}
+          className={`p-3 rounded-full transition-colors ${
             activeTab === 'code-ide'
-              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-[#1a73e8] text-white ring-2 ring-blue-400'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
+          title="In-Call Developer IDE & Runtime Sandbox"
         >
-          <Code className="w-4 h-4" />
-          <span>Code IDE</span>
+          <Code className="w-5 h-5" />
         </button>
 
         {/* Architecture Whiteboard */}
         <button
-          onClick={() => onTabChange('whiteboard')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+          onClick={() => onTabChange(activeTab === 'whiteboard' ? 'stage' : 'whiteboard')}
+          className={`p-3 rounded-full transition-colors hidden sm:inline-flex ${
             activeTab === 'whiteboard'
-              ? 'bg-cyan-600 text-white shadow-md shadow-cyan-600/30'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-[#1a73e8] text-white ring-2 ring-blue-400'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
+          title="Architecture & System Whiteboard"
         >
-          <Layout className="w-4 h-4" />
-          <span className="hidden sm:inline">Whiteboard</span>
+          <Layout className="w-5 h-5" />
         </button>
 
-        {/* Investor Pitch Deck */}
+        {/* Pitch Deck Presenter */}
         <button
-          onClick={() => onTabChange('pitch-deck')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+          onClick={() => onTabChange(activeTab === 'pitch-deck' ? 'stage' : 'pitch-deck')}
+          className={`p-3 rounded-full transition-colors hidden md:inline-flex ${
             activeTab === 'pitch-deck'
-              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-[#1a73e8] text-white ring-2 ring-blue-400'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
+          title="Investor Pitch Deck with Privacy Watermarks"
         >
-          <Presentation className="w-4 h-4" />
-          <span>Pitch Deck</span>
+          <Presentation className="w-5 h-5" />
         </button>
 
-        {/* Timetable & Green Room */}
-        <button
-          onClick={() => onTabChange('agenda')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'agenda'
-              ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          <span className="hidden md:inline">Agenda</span>
-        </button>
-
-        {/* Gemini AI Intelligence */}
-        <button
-          onClick={() => onTabChange('ai-intelligence')}
-          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'ai-intelligence'
-              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-violet-600/30'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-violet-400" />
-          <span className="hidden lg:inline">AI Intelligence</span>
-        </button>
-      </div>
-
-      {/* Right: Raise Hand, Chat Drawer Toggle & Leave Call */}
-      <div className="flex items-center space-x-2 sm:space-x-3">
         {/* Hand Raise */}
         <button
           onClick={onToggleHandRaise}
-          className={`p-2.5 rounded-xl border transition-all ${
+          className={`p-3 rounded-full transition-colors ${
             currentUser.handRaised
-              ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+              ? 'bg-[#f9ab00] text-slate-950 font-bold'
+              : 'bg-[#3c4043] text-white hover:bg-[#4a4e51]'
           }`}
-          title={currentUser.handRaised ? 'Lower Hand' : 'Raise Hand'}
+          title={currentUser.handRaised ? 'Lower hand' : 'Raise hand'}
         >
-          <Hand className="w-4 h-4" />
+          <Hand className="w-5 h-5" />
         </button>
 
-        {/* Chat / Q&A Button */}
-        <button
-          onClick={onToggleChat}
-          className={`relative p-2.5 rounded-xl border transition-all ${
-            isChatOpen
-              ? 'bg-violet-600 border-violet-500 text-white shadow-md shadow-violet-600/20'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-          }`}
-          title="Toggle Chat & Q&A Panel"
-        >
-          <MessageSquare className="w-4 h-4" />
-          {unreadCount > 0 && !isChatOpen && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-violet-500 text-[10px] font-bold text-white flex items-center justify-center">
-              {unreadCount}
-            </span>
-          )}
-        </button>
-
-        {/* End / Leave Meeting */}
+        {/* End Call Button (Red pill button matching Google Meet) */}
         <button
           onClick={onLeaveMeeting}
-          className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 transition-all active:scale-95"
-          title="Leave Conference"
+          className="px-5 py-3 rounded-full bg-[#ea4335] hover:bg-[#d93025] text-white font-bold text-sm shadow-md transition-all active:scale-95 flex items-center space-x-1"
+          title="Leave call"
         >
-          <PhoneOff className="w-4 h-4" />
-          <span className="hidden sm:inline">Leave</span>
+          <PhoneOff className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Right: Gemini Notes Badge, People, Chat & Deal Room */}
+      <div className="flex items-center space-x-2">
+        {/* Gemini AI Notes Pill Button (Matching Screenshot Top-Right Badge) */}
+        <button
+          onClick={() => onTabChange(activeTab === 'ai-intelligence' ? 'stage' : 'ai-intelligence')}
+          className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-md transition-all ${
+            activeTab === 'ai-intelligence'
+              ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white ring-2 ring-violet-400'
+              : 'bg-gradient-to-r from-violet-600/90 to-indigo-600/90 hover:from-violet-500 hover:to-indigo-500 text-white'
+          }`}
+          title="Gemini Live Meeting Intelligence & Minutes"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-cyan-300" />
+          <span className="hidden xl:inline">Gemini is taking notes</span>
+          <span className="xl:hidden">AI</span>
+        </button>
+
+        {/* Agenda / Green Room */}
+        <button
+          onClick={() => onTabChange(activeTab === 'agenda' ? 'stage' : 'agenda')}
+          className={`p-2.5 rounded-full transition-colors hidden sm:inline-flex ${
+            activeTab === 'agenda' ? 'bg-[#1a73e8] text-white' : 'text-[#9aa0a6] hover:bg-[#2d2f31] hover:text-white'
+          }`}
+          title="Conference Agenda & Backstage Green Room"
+        >
+          <Calendar className="w-5 h-5" />
+        </button>
+
+        {/* Deal Room Modal */}
+        <button
+          onClick={onOpenDealRoom}
+          className="p-2.5 rounded-full text-[#9aa0a6] hover:bg-[#2d2f31] hover:text-[#81c995] transition-colors hidden sm:inline-flex"
+          title="Institutional Deal Room & Term Sheet"
+        >
+          <Briefcase className="w-5 h-5" />
+        </button>
+
+        {/* Chat Button */}
+        <button
+          onClick={onToggleChat}
+          className={`relative p-2.5 rounded-full transition-colors ${
+            isChatOpen ? 'bg-[#1a73e8] text-white' : 'text-[#9aa0a6] hover:bg-[#2d2f31] hover:text-white'
+          }`}
+          title="Chat with everyone"
+        >
+          <MessageSquare className="w-5 h-5" />
+          {unreadCount > 0 && !isChatOpen && (
+            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#1a73e8]" />
+          )}
         </button>
       </div>
     </div>

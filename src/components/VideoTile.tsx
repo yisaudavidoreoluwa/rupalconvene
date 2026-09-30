@@ -5,13 +5,11 @@ import {
   Mic, 
   MicOff, 
   Pin, 
-  MoreVertical, 
-  Shield, 
+  TrendingUp, 
   Briefcase, 
   Code, 
-  Sparkles, 
-  TrendingUp,
-  Volume2
+  Shield, 
+  Volume2 
 } from 'lucide-react';
 import { Participant, ParticipantRole } from '@/types/meeting';
 
@@ -22,6 +20,7 @@ interface VideoTileProps {
   onPinToggle?: () => void;
   onMoveToGreenRoom?: () => void;
   localVideoRef?: React.RefObject<HTMLVideoElement | null>;
+  isPip?: boolean;
 }
 
 export const VideoTile: React.FC<VideoTileProps> = ({
@@ -31,62 +30,37 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   onPinToggle,
   onMoveToGreenRoom,
   localVideoRef,
+  isPip = false,
 }) => {
   const getRoleBadge = (role: ParticipantRole) => {
     switch (role) {
       case 'tech-lead':
-        return {
-          label: 'Tech Lead',
-          className: 'bg-violet-500/20 text-violet-300 border-violet-500/40',
-          icon: <Code className="w-3 h-3 text-violet-400" />
-        };
+        return { label: 'Tech Lead', color: 'bg-violet-500/20 text-violet-300 border-violet-500/30' };
       case 'developer':
-        return {
-          label: 'Engineer',
-          className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40',
-          icon: <Code className="w-3 h-3 text-cyan-400" />
-        };
+        return { label: 'Engineer', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
       case 'investor':
-        return {
-          label: 'Investor / VC',
-          className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
-          icon: <TrendingUp className="w-3 h-3 text-emerald-400" />
-        };
+        return { label: 'Investor / VC', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
       case 'business-partner':
-        return {
-          label: 'Partner',
-          className: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
-          icon: <Briefcase className="w-3 h-3 text-indigo-400" />
-        };
-      case 'host':
-        return {
-          label: 'Host',
-          className: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
-          icon: <Shield className="w-3 h-3 text-amber-400" />
-        };
+        return { label: 'Partner', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' };
       default:
-        return {
-          label: 'Guest',
-          className: 'bg-slate-500/20 text-slate-300 border-slate-500/40',
-          icon: null
-        };
+        return { label: 'Presenter', color: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
     }
   };
 
   const badge = getRoleBadge(participant.role);
 
   return (
-    <div 
-      className={`group relative rounded-2xl overflow-hidden bg-slate-900 border transition-all duration-300 flex flex-col justify-between shadow-xl ${
+    <div
+      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#2d2f31] border transition-all duration-300 flex flex-col justify-between shadow-lg select-none ${
         participant.isSpeaking
-          ? 'ring-2 ring-emerald-500/80 border-emerald-500/50 shadow-emerald-500/10'
+          ? 'ring-2 ring-[#34a853] border-[#34a853]'
           : isPinned
-          ? 'ring-2 ring-violet-500/70 border-violet-500/50'
-          : 'border-slate-800 hover:border-slate-700/80'
+          ? 'ring-2 ring-[#1a73e8] border-[#1a73e8]'
+          : 'border-[#3c4043]/70 hover:border-[#5f6368]'
       }`}
     >
-      {/* Background / Video Feed */}
-      <div className="absolute inset-0 w-full h-full bg-slate-950 flex items-center justify-center overflow-hidden">
+      {/* Video Content Layer */}
+      <div className="absolute inset-0 w-full h-full bg-[#202124] flex items-center justify-center overflow-hidden">
         {isSelf && localVideoRef ? (
           <video
             ref={localVideoRef}
@@ -99,121 +73,86 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           />
         ) : null}
 
-        {/* Fallback Avatar & Simulated Video Background */}
+        {/* Fallback Avatar Screen */}
         {(!isSelf || participant.isVideoOff) && (
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
-            {/* Ambient background glow matching role */}
-            <div 
-              className={`absolute w-36 h-36 rounded-full blur-3xl opacity-20 ${
-                participant.role === 'tech-lead' || participant.role === 'developer'
-                  ? 'bg-violet-600'
-                  : participant.role === 'investor'
-                  ? 'bg-emerald-600'
-                  : 'bg-indigo-600'
-              }`}
-            />
-            
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#2d2f31] to-[#202124]">
             <div className="relative mb-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={participant.avatar}
                 alt={participant.name}
-                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 shadow-2xl transition-transform duration-300 group-hover:scale-105 ${
+                className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 shadow-xl transition-transform group-hover:scale-105 ${
                   participant.isSpeaking
-                    ? 'ring-emerald-400 ring-offset-2 ring-offset-slate-950'
-                    : 'ring-slate-700'
+                    ? 'ring-[#34a853] ring-offset-2 ring-offset-[#202124]'
+                    : 'ring-[#3c4043]'
                 }`}
               />
               {participant.isSpeaking && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full shadow-lg text-white">
+                <div className="absolute -bottom-1 -right-1 p-1 bg-[#34a853] rounded-full text-white shadow">
                   <Volume2 className="w-3.5 h-3.5 animate-pulse" />
                 </div>
               )}
             </div>
 
             <div className="text-center z-10">
-              <div className="text-sm font-semibold text-white tracking-wide truncate max-w-[200px]">
+              <div className="text-sm font-semibold text-white truncate max-w-[200px]">
                 {participant.name} {isSelf && '(You)'}
               </div>
-              <div className="text-[11px] text-slate-400 truncate max-w-[200px]">
-                {participant.jobTitle} • {participant.organization}
+              <div className="text-[11px] text-[#9aa0a6] truncate max-w-[200px]">
+                {participant.jobTitle}
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Top Bar: Role Badge & Quick Actions */}
-      <div className="relative z-10 p-3 flex items-center justify-between w-full bg-gradient-to-b from-slate-950/80 via-slate-950/40 to-transparent">
+      {/* Top Bar: Role Pill & Mic Status */}
+      <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
         <div className="flex items-center space-x-1.5">
-          <span 
-            className={`flex items-center space-x-1 px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wider uppercase border backdrop-blur-md ${badge.className}`}
-          >
-            {badge.icon}
-            <span>{badge.label}</span>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border backdrop-blur-md ${badge.color}`}>
+            {badge.label}
           </span>
-
           {participant.handRaised && (
-            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-md text-[10px] font-bold animate-bounce">
-              ✋ Raised Hand
+            <span className="bg-[#f9ab00]/20 text-[#fdd663] border border-[#f9ab00]/40 px-2 py-0.5 rounded text-[10px] font-bold">
+              ✋ Hand Raised
             </span>
           )}
         </div>
 
-        {/* Hover Action Buttons */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 bg-slate-900/80 p-1 rounded-lg border border-slate-700/50 backdrop-blur-md">
+        {/* Top-Right Mute Badge */}
+        <div className="flex items-center space-x-1">
+          {participant.isMuted && (
+            <div className="p-1 rounded-full bg-[#ea4335] text-white shadow-md" title="Muted">
+              <MicOff className="w-3 h-3" />
+            </div>
+          )}
+
           {onPinToggle && (
             <button
               onClick={onPinToggle}
-              className={`p-1 rounded hover:bg-slate-800 transition-colors ${
-                isPinned ? 'text-violet-400' : 'text-slate-400 hover:text-white'
+              className={`p-1 rounded bg-[#202124]/80 text-[#9aa0a6] hover:text-white transition-opacity opacity-0 group-hover:opacity-100 ${
+                isPinned ? 'opacity-100 text-[#1a73e8]' : ''
               }`}
-              title={isPinned ? 'Unpin' : 'Pin Stage'}
+              title={isPinned ? 'Unpin' : 'Pin tile'}
             >
               <Pin className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {onMoveToGreenRoom && !isSelf && (
-            <button
-              onClick={onMoveToGreenRoom}
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-800 hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 transition-colors"
-              title="Send to Green Room"
-            >
-              Green Room
             </button>
           )}
         </div>
       </div>
 
-      {/* Bottom Bar: Name & Mic Status & Speech Meter */}
-      <div className="relative z-10 p-3 flex items-center justify-between w-full bg-gradient-to-t from-slate-950/90 via-slate-950/50 to-transparent">
-        <div className="flex items-center space-x-2">
-          <div 
-            className={`p-1.5 rounded-full backdrop-blur-md ${
-              participant.isMuted 
-                ? 'bg-red-500/20 text-red-400 border border-red-500/30' 
-                : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-            }`}
-          >
-            {participant.isMuted ? (
-              <MicOff className="w-3 h-3" />
-            ) : (
-              <Mic className="w-3 h-3" />
-            )}
-          </div>
-          
-          <span className="text-xs font-medium text-slate-200 truncate max-w-[150px] shadow-sm">
-            {participant.name} {isSelf && '(You)'}
-          </span>
+      {/* Bottom Bar: Name Tag (Google Meet Style) */}
+      <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
+        <div className="px-2.5 py-1 rounded-md bg-[#202124]/85 text-white text-xs font-medium backdrop-blur-md border border-[#3c4043]/50 flex items-center space-x-1.5">
+          <span>{participant.name} {isSelf && '(You)'}</span>
         </div>
 
-        {/* Audio Waveform Indicator */}
+        {/* Speaking Waveform Indicator (Google Meet Style) */}
         {participant.isSpeaking && (
-          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-emerald-950/80 border border-emerald-500/30">
-            <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms]" />
-            <span className="w-0.5 h-3.5 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms]" />
-            <span className="w-0.5 h-1.5 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_300ms]" />
-            <span className="w-0.5 h-3 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_150ms]" />
+          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#202124]/80 border border-[#34a853]/40">
+            <span className="w-0.5 h-2 bg-[#81c995] rounded-full animate-bounce" />
+            <span className="w-0.5 h-3.5 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_100ms]" />
+            <span className="w-0.5 h-2 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_200ms]" />
           </div>
         )}
       </div>
