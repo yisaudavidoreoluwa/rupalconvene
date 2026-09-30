@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { VideoTile } from './VideoTile';
 import { Participant, StageLayout } from '@/types/meeting';
-import { UserCheck, Sparkles } from 'lucide-react';
+import { UserCheck } from 'lucide-react';
 
 interface VideoStageProps {
   participants: Participant[];
@@ -37,17 +37,17 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   );
 
   return (
-    <div className="relative w-full h-full flex flex-col p-2 sm:p-4 overflow-hidden bg-[#202124]">
+    <div className="relative w-full h-full flex flex-col p-2 sm:p-4 overflow-hidden bg-[#f8fafc]">
       {/* Green Room Alert Bar for Stage Hosts */}
       {greenRoomParticipants.length > 0 && !compactMode && (
-        <div className="mb-3 px-4 py-2 rounded-xl bg-[#2d2f31] border border-[#f9ab00]/40 text-[#fdd663] flex items-center justify-between shadow-lg">
+        <div className="mb-3 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-center justify-between shadow-sm">
           <div className="flex items-center space-x-2.5 text-xs sm:text-sm">
             <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f9ab00] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#f9ab00]"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-600"></span>
             </span>
-            <span className="font-semibold text-white">Backstage Green Room:</span>
-            <span className="text-[#9aa0a6] hidden sm:inline">
+            <span className="font-bold text-[#0f172a]">Backstage Green Room:</span>
+            <span className="text-slate-600 hidden sm:inline font-medium">
               {greenRoomParticipants.map((p) => `${p.name} (${p.jobTitle})`).join(', ')}
             </span>
           </div>
@@ -57,7 +57,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               <button
                 key={p.id}
                 onClick={() => onAdmitFromGreenRoom(p.id)}
-                className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#f9ab00] hover:bg-[#f29900] text-slate-950 font-bold text-xs transition-colors shadow-sm"
+                className="flex items-center space-x-1.5 px-3 py-1 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs transition-colors shadow-sm"
               >
                 <UserCheck className="w-3.5 h-3.5" />
                 <span>Admit {p.name.split(' ')[0]}</span>
@@ -114,9 +114,9 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           )}
         </div>
       ) : (
-        /* Google Meet Multi-party Grid */
+        /* Multi-party Grid on White/Slate Canvas with Deep Navy Tiles */
         <div 
-          className={`flex-1 grid gap-3 sm:gap-3.5 auto-rows-fr ${
+          className={`flex-1 grid gap-3.5 auto-rows-fr ${
             stageParticipants.length <= 1
               ? 'grid-cols-1'
               : stageParticipants.length === 2
@@ -127,7 +127,7 @@ export const VideoStage: React.FC<VideoStageProps> = ({
           }`}
         >
           {stageParticipants.map((p) => (
-            <div key={p.id} className="w-full h-full min-h-[180px]">
+            <div key={p.id} className="w-full h-full min-h-[190px]">
               <VideoTile
                 participant={p}
                 isSelf={p.id === 'user-self'}

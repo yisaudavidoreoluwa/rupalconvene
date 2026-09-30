@@ -5,10 +5,6 @@ import {
   Mic, 
   MicOff, 
   Pin, 
-  TrendingUp, 
-  Briefcase, 
-  Code, 
-  Shield, 
   Volume2 
 } from 'lucide-react';
 import { Participant, ParticipantRole } from '@/types/meeting';
@@ -35,13 +31,13 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   const getRoleBadge = (role: ParticipantRole) => {
     switch (role) {
       case 'tech-lead':
-        return { label: 'Tech Lead', color: 'bg-violet-500/20 text-violet-300 border-violet-500/30' };
+        return { label: 'Tech Lead', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' };
       case 'developer':
         return { label: 'Engineer', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' };
       case 'investor':
         return { label: 'Investor / VC', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' };
       case 'business-partner':
-        return { label: 'Partner', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' };
+        return { label: 'Partner', color: 'bg-sky-500/20 text-sky-300 border-sky-500/30' };
       default:
         return { label: 'Presenter', color: 'bg-slate-500/20 text-slate-300 border-slate-500/30' };
     }
@@ -51,16 +47,16 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
   return (
     <div
-      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#2d2f31] border transition-all duration-300 flex flex-col justify-between shadow-lg select-none ${
+      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] border transition-all duration-300 flex flex-col justify-between shadow-md select-none ${
         participant.isSpeaking
-          ? 'ring-2 ring-[#34a853] border-[#34a853]'
+          ? 'ring-2 ring-emerald-500 border-emerald-500 shadow-emerald-500/10'
           : isPinned
-          ? 'ring-2 ring-[#1a73e8] border-[#1a73e8]'
-          : 'border-[#3c4043]/70 hover:border-[#5f6368]'
+          ? 'ring-2 ring-blue-500 border-blue-500'
+          : 'border-[#1e293b] hover:border-slate-600'
       }`}
     >
       {/* Video Content Layer */}
-      <div className="absolute inset-0 w-full h-full bg-[#202124] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 w-full h-full bg-[#0a192f] flex items-center justify-center overflow-hidden">
         {isSelf && localVideoRef ? (
           <video
             ref={localVideoRef}
@@ -75,7 +71,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
         {/* Fallback Avatar Screen */}
         {(!isSelf || participant.isVideoOff) && (
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#2d2f31] to-[#202124]">
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-6 bg-gradient-to-b from-[#0f172a] via-[#0a192f] to-[#0f172a]">
             <div className="relative mb-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -83,22 +79,22 @@ export const VideoTile: React.FC<VideoTileProps> = ({
                 alt={participant.name}
                 className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-2 shadow-xl transition-transform group-hover:scale-105 ${
                   participant.isSpeaking
-                    ? 'ring-[#34a853] ring-offset-2 ring-offset-[#202124]'
-                    : 'ring-[#3c4043]'
+                    ? 'ring-emerald-400 ring-offset-2 ring-offset-[#0a192f]'
+                    : 'ring-[#1e293b]'
                 }`}
               />
               {participant.isSpeaking && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-[#34a853] rounded-full text-white shadow">
+                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full text-white shadow">
                   <Volume2 className="w-3.5 h-3.5 animate-pulse" />
                 </div>
               )}
             </div>
 
             <div className="text-center z-10">
-              <div className="text-sm font-semibold text-white truncate max-w-[200px]">
+              <div className="text-sm font-bold text-white truncate max-w-[200px]">
                 {participant.name} {isSelf && '(You)'}
               </div>
-              <div className="text-[11px] text-[#9aa0a6] truncate max-w-[200px]">
+              <div className="text-[11px] text-slate-400 truncate max-w-[200px] font-medium">
                 {participant.jobTitle}
               </div>
             </div>
@@ -109,11 +105,11 @@ export const VideoTile: React.FC<VideoTileProps> = ({
       {/* Top Bar: Role Pill & Mic Status */}
       <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
         <div className="flex items-center space-x-1.5">
-          <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase border backdrop-blur-md ${badge.color}`}>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase border backdrop-blur-md ${badge.color}`}>
             {badge.label}
           </span>
           {participant.handRaised && (
-            <span className="bg-[#f9ab00]/20 text-[#fdd663] border border-[#f9ab00]/40 px-2 py-0.5 rounded text-[10px] font-bold">
+            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded text-[10px] font-bold">
               ✋ Hand Raised
             </span>
           )}
@@ -130,8 +126,8 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           {onPinToggle && (
             <button
               onClick={onPinToggle}
-              className={`p-1 rounded bg-[#202124]/80 text-[#9aa0a6] hover:text-white transition-opacity opacity-0 group-hover:opacity-100 ${
-                isPinned ? 'opacity-100 text-[#1a73e8]' : ''
+              className={`p-1 rounded bg-[#0f172a]/80 text-slate-400 hover:text-white transition-opacity opacity-0 group-hover:opacity-100 ${
+                isPinned ? 'opacity-100 text-blue-400' : ''
               }`}
               title={isPinned ? 'Unpin' : 'Pin tile'}
             >
@@ -141,18 +137,18 @@ export const VideoTile: React.FC<VideoTileProps> = ({
         </div>
       </div>
 
-      {/* Bottom Bar: Name Tag (Google Meet Style) */}
+      {/* Bottom Bar: Name Tag in Navy Pill */}
       <div className="relative z-10 p-2.5 flex items-center justify-between w-full">
-        <div className="px-2.5 py-1 rounded-md bg-[#202124]/85 text-white text-xs font-medium backdrop-blur-md border border-[#3c4043]/50 flex items-center space-x-1.5">
+        <div className="px-2.5 py-1 rounded-md bg-[#0f172a]/90 text-white text-xs font-semibold backdrop-blur-md border border-[#1e293b] flex items-center space-x-1.5 shadow-sm">
           <span>{participant.name} {isSelf && '(You)'}</span>
         </div>
 
-        {/* Speaking Waveform Indicator (Google Meet Style) */}
+        {/* Speaking Waveform Indicator */}
         {participant.isSpeaking && (
-          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#202124]/80 border border-[#34a853]/40">
-            <span className="w-0.5 h-2 bg-[#81c995] rounded-full animate-bounce" />
-            <span className="w-0.5 h-3.5 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_100ms]" />
-            <span className="w-0.5 h-2 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_200ms]" />
+          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#0f172a]/90 border border-emerald-500/40">
+            <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" />
+            <span className="w-0.5 h-3.5 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms]" />
+            <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms]" />
           </div>
         )}
       </div>

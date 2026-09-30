@@ -8,9 +8,7 @@ import {
   MicOff, 
   Sparkles, 
   ShieldCheck, 
-  Settings, 
   ArrowRight, 
-  Share2, 
   Code, 
   Users,
   Copy,
@@ -65,30 +63,28 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
   const activeOthers = participants.filter((p) => p.id !== currentUser.id && !p.inGreenRoom);
 
   return (
-    <div className="min-h-screen w-screen bg-[#202124] text-[#e8eaed] flex flex-col font-sans select-none">
+    <div className="min-h-screen w-screen bg-[#f8fafc] text-[#0f172a] flex flex-col font-sans select-none">
       {/* Top Header */}
-      <header className="h-16 px-6 flex items-center justify-between border-b border-[#3c4043]/50">
+      <header className="h-16 px-6 bg-white flex items-center justify-between border-b border-slate-200 shadow-sm">
         <div className="flex items-center space-x-3">
-          {/* Rupal Colorful Logo */}
-          <div className="w-8 h-8 rounded-lg bg-white border border-[#5f6368] flex items-center justify-center p-1 shadow-sm">
-            <span className="font-extrabold text-lg bg-gradient-to-tr from-[#1a73e8] via-[#34a853] to-[#f9ab00] bg-clip-text text-transparent">
-              R
-            </span>
+          {/* Rupal Navy Box */}
+          <div className="w-8 h-8 rounded-lg bg-[#0f172a] text-white flex items-center justify-center p-1 shadow-sm">
+            <span className="font-extrabold text-lg">R</span>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="font-bold text-lg text-white tracking-tight">Rupal Convene</span>
-            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-[#1a73e8]/20 text-[#8ab4f8] border border-[#1a73e8]/30">
+            <span className="font-extrabold text-lg text-[#0f172a] tracking-tight">Rupal Convene</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-[#0f172a] border border-slate-300">
               Tech & Partner Edition
             </span>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 text-xs text-[#9aa0a6]">
-          <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#2d2f31] border border-[#3c4043]">
-            <ShieldCheck className="w-4 h-4 text-[#81c995]" />
+        <div className="flex items-center space-x-3 text-xs text-slate-600">
+          <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 font-semibold text-[#0f172a]">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>WebRTC Encrypted</span>
           </div>
-          <div className="w-8 h-8 rounded-full bg-[#1a73e8] text-white flex items-center justify-center font-bold text-sm">
+          <div className="w-8 h-8 rounded-full bg-[#0f172a] text-white flex items-center justify-center font-bold text-sm">
             {currentUser.name.charAt(0)}
           </div>
         </div>
@@ -96,9 +92,9 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
 
       {/* Main Lobby Body */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-8 flex flex-col lg:flex-row items-center justify-center gap-10 lg:gap-14">
-        {/* Left: Camera & Mic Test Frame (Google Meet Style) */}
+        {/* Left: Camera & Mic Test Frame (Deep Navy Container on White Background) */}
         <div className="w-full max-w-xl flex flex-col items-center">
-          <div className="relative w-full aspect-[16/10] rounded-[24px] bg-[#2d2f31] border-2 border-[#3c4043] overflow-hidden shadow-2xl flex items-center justify-center">
+          <div className="relative w-full aspect-[16/10] rounded-[24px] bg-[#0f172a] border-2 border-[#1e293b] overflow-hidden shadow-2xl flex items-center justify-center">
             {/* Live Camera Stream */}
             {!currentUser.isVideoOff ? (
               <video
@@ -112,14 +108,14 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
 
             {/* Avatar Fallback */}
             {currentUser.isVideoOff && (
-              <div className="flex flex-col items-center justify-center space-y-3">
+              <div className="flex flex-col items-center justify-center space-y-3 text-white">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={currentUser.avatar}
                   alt={currentUser.name}
-                  className="w-24 h-24 rounded-full object-cover ring-4 ring-[#3c4043]"
+                  className="w-24 h-24 rounded-full object-cover ring-4 ring-[#1e293b]"
                 />
-                <span className="text-sm font-medium text-[#9aa0a6]">Camera is off</span>
+                <span className="text-sm font-medium text-slate-300">Camera is off</span>
               </div>
             )}
 
@@ -130,7 +126,7 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
                 className={`p-3.5 rounded-full transition-all shadow-lg active:scale-95 ${
                   currentUser.isMuted
                     ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
-                    : 'bg-[#3c4043]/90 text-white hover:bg-[#4a4e51] backdrop-blur-md'
+                    : 'bg-[#1e293b]/90 text-white hover:bg-[#334155] backdrop-blur-md'
                 }`}
                 title={currentUser.isMuted ? 'Turn on microphone' : 'Turn off microphone'}
               >
@@ -142,7 +138,7 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
                 className={`p-3.5 rounded-full transition-all shadow-lg active:scale-95 ${
                   currentUser.isVideoOff
                     ? 'bg-[#ea4335] text-white hover:bg-[#d93025]'
-                    : 'bg-[#3c4043]/90 text-white hover:bg-[#4a4e51] backdrop-blur-md'
+                    : 'bg-[#1e293b]/90 text-white hover:bg-[#334155] backdrop-blur-md'
                 }`}
                 title={currentUser.isVideoOff ? 'Turn on camera' : 'Turn off camera'}
               >
@@ -152,10 +148,10 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
 
             {/* Visual audio indicator */}
             {!currentUser.isMuted && (
-              <div className="absolute top-4 left-4 p-2 rounded-full bg-[#202124]/70 backdrop-blur-md border border-[#3c4043] flex items-center space-x-1">
-                <span className="w-1 h-2 bg-[#81c995] rounded-full animate-bounce" />
-                <span className="w-1 h-3.5 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_100ms]" />
-                <span className="w-1 h-2 bg-[#81c995] rounded-full animate-[bounce_0.6s_infinite_200ms]" />
+              <div className="absolute top-4 left-4 p-2 rounded-full bg-[#0f172a]/70 backdrop-blur-md border border-[#334155] flex items-center space-x-1">
+                <span className="w-1 h-2 bg-emerald-400 rounded-full animate-bounce" />
+                <span className="w-1 h-3.5 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms]" />
+                <span className="w-1 h-2 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms]" />
               </div>
             )}
 
@@ -166,33 +162,33 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 mt-3 text-xs text-[#9aa0a6]">
+          <div className="flex items-center space-x-4 mt-3 text-xs text-slate-500 font-medium">
             <span>Microphone calibrated</span>
             <span>•</span>
             <span>1080p HD Video</span>
             <span>•</span>
-            <button onClick={handleCopy} className="hover:text-[#8ab4f8] transition-colors flex items-center space-x-1">
+            <button onClick={handleCopy} className="hover:text-[#0f172a] transition-colors flex items-center space-x-1">
               <span>{roomCode}</span>
-              {copied ? <Check className="w-3.5 h-3.5 text-[#81c995]" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
 
-        {/* Right: Meeting Join Actions (Google Meet Style) */}
+        {/* Right: Meeting Join Actions (White Background with Navy Blue Accents) */}
         <div className="w-full max-w-md space-y-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#0f172a] tracking-tight">
               Ready to join?
             </h1>
-            <p className="text-base text-[#9aa0a6] mt-1 font-normal">
+            <p className="text-base text-slate-600 mt-1 font-normal">
               {meetingTitle}
             </p>
           </div>
 
           {/* Attendees already in the call */}
-          <div className="p-4 rounded-2xl bg-[#2d2f31] border border-[#3c4043] space-y-2">
-            <div className="flex items-center space-x-2 text-xs font-semibold text-[#8ab4f8]">
-              <Users className="w-4 h-4" />
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-2">
+            <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a]">
+              <Users className="w-4 h-4 text-blue-600" />
               <span>{activeOthers.length} participants already in meeting</span>
             </div>
             <div className="flex items-center space-x-2 overflow-x-auto py-1">
@@ -202,22 +198,22 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
                   <img
                     src={p.avatar}
                     alt={p.name}
-                    className="w-8 h-8 rounded-full object-cover ring-2 ring-[#3c4043]"
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200"
                   />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-[#81c995] ring-1 ring-[#202124]" />
+                  <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-1 ring-white" />
                 </div>
               ))}
-              <span className="text-xs text-[#9aa0a6] pl-1">
+              <span className="text-xs text-slate-500 pl-1 font-medium">
                 {activeOthers.map((p) => p.name.split(' ')[0]).join(', ')}
               </span>
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Action Buttons (Navy Blue) */}
           <div className="space-y-3">
             <button
               onClick={() => onJoinMeeting('stage')}
-              className="w-full py-3.5 rounded-full bg-[#1a73e8] hover:bg-[#185abc] text-white font-bold text-sm shadow-lg shadow-[#1a73e8]/25 transition-all active:scale-98 flex items-center justify-center space-x-2"
+              className="w-full py-3.5 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-sm shadow-lg shadow-slate-900/15 transition-all active:scale-98 flex items-center justify-center space-x-2"
             >
               <span>Join now</span>
               <ArrowRight className="w-4 h-4" />
@@ -225,14 +221,14 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
 
             <button
               onClick={() => onJoinMeeting('code-ide')}
-              className="w-full py-3 rounded-full bg-transparent hover:bg-[#3c4043]/40 text-[#8ab4f8] font-semibold text-sm border border-[#5f6368] transition-colors flex items-center justify-center space-x-2"
+              className="w-full py-3 rounded-full bg-white hover:bg-slate-50 text-[#0f172a] font-bold text-sm border-2 border-[#0f172a] transition-colors flex items-center justify-center space-x-2 shadow-sm"
             >
-              <Code className="w-4 h-4" />
+              <Code className="w-4 h-4 text-blue-600" />
               <span>Join with In-Call Code IDE</span>
             </button>
           </div>
 
-          <div className="pt-2 text-xs text-[#9aa0a6] leading-relaxed">
+          <div className="pt-2 text-xs text-slate-500 leading-relaxed">
             By joining, you agree to Rupal Convene&apos;s verified enterprise privacy watermarking and session recording policies.
           </div>
         </div>

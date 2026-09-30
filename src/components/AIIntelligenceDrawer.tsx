@@ -10,15 +10,12 @@ import {
   Circle, 
   AlertTriangle, 
   TrendingUp, 
-  Download, 
   Copy, 
   Check, 
-  Clock, 
-  User, 
   ShieldCheck,
   RefreshCw
 } from 'lucide-react';
-import { MeetingMinutes, LiveCaption, ActionItem } from '@/types/meeting';
+import { MeetingMinutes, LiveCaption } from '@/types/meeting';
 import { requestMeetingMinutes, askMeetingCopilot } from '@/lib/gemini-service';
 
 interface AIIntelligenceDrawerProps {
@@ -46,7 +43,7 @@ export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
   const [copilotHistory, setCopilotHistory] = useState<Array<{ sender: 'user' | 'gemini'; text: string }>>([
     {
       sender: 'gemini',
-      text: 'Hello! I am your TechConvene Gemini Copilot. I analyze live audio streams, in-meeting code executions, and investor pitch slides. How can I assist you?',
+      text: 'Hello! I am your Rupal Convene Gemini Copilot. I analyze live audio streams, in-meeting code executions, and investor pitch slides. How can I assist you?',
     },
   ]);
 
@@ -55,7 +52,7 @@ export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
     try {
       const generated = await requestMeetingMinutes({
         transcript: captions,
-        meetingTitle: 'Synthetix & TechConvene Partner Sync',
+        meetingTitle: 'Synthetix & Rupal Convene Partner Sync',
       });
       onUpdateMinutes(generated);
     } catch (e) {
@@ -107,7 +104,7 @@ export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
 
   const handleCopyMinutes = () => {
     const text = `
-# TECHCONVENE MEETING MINUTES - ${minutes.generatedAt}
+# RUPAL CONVENE MEETING MINUTES - ${minutes.generatedAt}
 
 ## Executive Summary
 ${minutes.executiveSummary}
@@ -131,40 +128,40 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
       {/* Drawer Top Navigation */}
-      <div className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between">
+      <div className="h-14 bg-white border-b border-slate-200 px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <div className="p-1 rounded-lg bg-violet-500/10 text-violet-400">
-            <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
+          <div className="p-1 rounded-lg bg-blue-50 text-blue-700">
+            <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />
           </div>
-          <span className="text-sm font-bold text-white tracking-wide">
+          <span className="text-sm font-extrabold text-[#0f172a] tracking-wide">
             Gemini AI Intelligence
           </span>
         </div>
 
         {/* Tab buttons */}
-        <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs">
+        <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-semibold">
           <button
             onClick={() => setActiveTab('minutes')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${
-              activeTab === 'minutes' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3 py-1 rounded-md transition-colors ${
+              activeTab === 'minutes' ? 'bg-white text-[#0f172a] shadow-sm' : 'text-slate-600 hover:text-[#0f172a]'
             }`}
           >
             Minutes & Debrief
           </button>
           <button
             onClick={() => setActiveTab('copilot')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${
-              activeTab === 'copilot' ? 'bg-slate-700 text-cyan-300' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3 py-1 rounded-md transition-colors ${
+              activeTab === 'copilot' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-blue-700'
             }`}
           >
             AI Copilot
           </button>
           <button
             onClick={() => setActiveTab('transcript')}
-            className={`px-3 py-1 rounded-md font-medium transition-colors ${
-              activeTab === 'transcript' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-slate-200'
+            className={`px-3 py-1 rounded-md transition-colors ${
+              activeTab === 'transcript' ? 'bg-white text-[#0f172a] shadow-sm' : 'text-slate-600 hover:text-[#0f172a]'
             }`}
           >
             Live Transcript
@@ -172,29 +169,29 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#0a0e17]">
+      {/* Main Content Area (White & Navy) */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-[#f8fafc]">
         {activeTab === 'minutes' && (
           <div className="space-y-6 max-w-4xl mx-auto">
             {/* Action Bar */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <span className="text-xs text-slate-400 font-medium">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <span className="text-xs text-slate-500 font-semibold">
                 {minutes.generatedAt}
               </span>
 
               <div className="flex items-center space-x-2">
                 <button
                   onClick={handleCopyMinutes}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition-colors shadow-sm"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Copied Markdown' : 'Copy Minutes'}</span>
                 </button>
 
                 <button
                   onClick={handleGenerateMinutes}
                   disabled={isGenerating}
-                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-violet-600/20 transition-all active:scale-95 disabled:opacity-50"
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold shadow-md shadow-slate-900/10 transition-all active:scale-95 disabled:opacity-50"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
                   <span>{isGenerating ? 'Synthesizing...' : 'Regenerate Debrief'}</span>
@@ -202,27 +199,27 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
               </div>
             </div>
 
-            {/* Executive Summary */}
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="flex items-center space-x-2 text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">
-                <FileText className="w-3.5 h-3.5" />
+            {/* Executive Summary Card */}
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a] uppercase tracking-wider mb-2">
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
                 <span>Executive Summary</span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed font-normal">
+              <p className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
                 {minutes.executiveSummary}
               </p>
             </div>
 
             {/* Technical Architecture Decisions */}
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div className="flex items-center space-x-2 text-xs font-bold text-cyan-400 uppercase tracking-wider mb-3">
-                <ShieldCheck className="w-3.5 h-3.5" />
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+              <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a] uppercase tracking-wider mb-3">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
                 <span>Key Technical Decisions</span>
               </div>
               <ul className="space-y-2">
                 {minutes.keyTechnicalDecisions.map((decision, idx) => (
-                  <li key={idx} className="flex items-start space-x-2 text-xs sm:text-sm text-slate-300">
-                    <span className="text-cyan-400 font-bold mt-0.5">•</span>
+                  <li key={idx} className="flex items-start space-x-2 text-xs sm:text-sm text-slate-700">
+                    <span className="text-blue-600 font-bold mt-0.5">•</span>
                     <span>{decision}</span>
                   </li>
                 ))}
@@ -230,13 +227,13 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
             </div>
 
             {/* Priority Action Items */}
-            <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                  <CheckCircle className="w-3.5 h-3.5" />
+                <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a] uppercase tracking-wider">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Assigned Action Items & Deadlines</span>
                 </div>
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-slate-500 font-semibold">
                   {minutes.actionItems.filter((a) => a.status === 'completed').length} of {minutes.actionItems.length} Done
                 </span>
               </div>
@@ -250,30 +247,30 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
                       onClick={() => toggleActionItem(item.id)}
                       className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
                         isDone
-                          ? 'bg-slate-900/30 border-slate-800/60 opacity-60'
-                          : 'bg-slate-900 border-slate-800 hover:border-slate-700'
+                          ? 'bg-slate-50 border-slate-200 opacity-60'
+                          : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
                         {isDone ? (
-                          <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                          <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                         ) : (
-                          <Circle className="w-4 h-4 text-slate-500 hover:text-slate-300 flex-shrink-0" />
+                          <Circle className="w-4 h-4 text-slate-400 hover:text-slate-600 flex-shrink-0" />
                         )}
-                        <span className={`text-xs sm:text-sm ${isDone ? 'line-through text-slate-500' : 'text-slate-200'}`}>
+                        <span className={`text-xs sm:text-sm font-medium ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                           {item.task}
                         </span>
                       </div>
 
                       <div className="flex items-center space-x-2 flex-shrink-0">
-                        <span className="text-[11px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                        <span className="text-[11px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded font-semibold">
                           {item.assignee}
                         </span>
                         <span
                           className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
                             item.priority === 'high'
-                              ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                              : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                              ? 'bg-red-50 text-red-700 border border-red-200'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200'
                           }`}
                         >
                           {item.due}
@@ -287,30 +284,30 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
 
             {/* Risks & Investor Highlights Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center space-x-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5" />
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+                <div className="flex items-center space-x-2 text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
                   <span>Identified Risks & Blockers</span>
                 </div>
-                <ul className="space-y-1.5 text-xs text-slate-300">
+                <ul className="space-y-1.5 text-xs text-slate-700">
                   {minutes.risksAndBlockers.map((r, i) => (
                     <li key={i} className="flex items-start space-x-1.5">
-                      <span className="text-amber-400">•</span>
+                      <span className="text-amber-500 font-bold">•</span>
                       <span>{r}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800">
-                <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
-                  <TrendingUp className="w-3.5 h-3.5" />
+              <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm">
+                <div className="flex items-center space-x-2 text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2">
+                  <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Investor & Commercial Signals</span>
                 </div>
-                <ul className="space-y-1.5 text-xs text-slate-300">
+                <ul className="space-y-1.5 text-xs text-slate-700">
                   {minutes.investorHighlights.map((h, i) => (
                     <li key={i} className="flex items-start space-x-1.5">
-                      <span className="text-emerald-400">•</span>
+                      <span className="text-emerald-500 font-bold">•</span>
                       <span>{h}</span>
                     </li>
                   ))}
@@ -332,16 +329,16 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
                   }`}
                 >
                   {msg.sender === 'gemini' && (
-                    <div className="w-7 h-7 rounded-lg bg-violet-600/20 border border-violet-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Bot className="w-4 h-4 text-violet-400" />
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Bot className="w-4 h-4 text-blue-600" />
                     </div>
                   )}
 
                   <div
                     className={`max-w-[85%] p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed ${
                       msg.sender === 'user'
-                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-tr-none shadow-md'
-                        : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none shadow-lg'
+                        ? 'bg-[#0f172a] text-white rounded-tr-none shadow-md font-medium'
+                        : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'
                     }`}
                   >
                     {msg.text}
@@ -350,8 +347,8 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
               ))}
 
               {copilotLoading && (
-                <div className="flex items-center space-x-2 text-xs text-slate-400 pl-10">
-                  <div className="w-2 h-2 rounded-full bg-violet-400 animate-ping" />
+                <div className="flex items-center space-x-2 text-xs text-slate-500 pl-10">
+                  <div className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
                   <span>Gemini is analyzing meeting context...</span>
                 </div>
               )}
@@ -364,12 +361,12 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
                 placeholder="Ask Gemini anything (e.g. 'What is our p99 latency target?', 'Explain the Python anomaly code')..."
                 value={copilotQuery}
                 onChange={(e) => setCopilotQuery(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-4 py-3 pr-12 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-violet-500 shadow-xl"
+                className="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 pr-12 text-xs sm:text-sm text-[#0f172a] placeholder-slate-400 focus:outline-none focus:border-[#0f172a] shadow-sm"
               />
               <button
                 type="submit"
                 disabled={!copilotQuery.trim() || copilotLoading}
-                className="absolute right-2 top-4 p-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white transition-colors"
+                className="absolute right-2 top-4 p-2 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] disabled:opacity-40 text-white transition-colors"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>
@@ -380,9 +377,9 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
         {/* Continuous Live Transcript Stream */}
         {activeTab === 'transcript' && (
           <div className="space-y-3 max-w-3xl mx-auto">
-            <div className="text-xs text-slate-400 flex items-center justify-between pb-2 border-b border-slate-800">
+            <div className="text-xs text-slate-500 flex items-center justify-between pb-2 border-b border-slate-200 font-semibold">
               <span className="flex items-center space-x-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Real-Time Multi-Speaker Audio Stream</span>
               </span>
               <span>100% Speech-to-Text Grounded</span>
@@ -391,19 +388,19 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
             {captions.map((cap) => (
               <div
                 key={cap.id}
-                className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-start space-x-3"
+                className="p-3 rounded-xl bg-white border border-slate-200 shadow-sm flex items-start space-x-3"
               >
-                <div className="text-[11px] font-mono text-slate-500 pt-0.5">
+                <div className="text-[11px] font-mono text-slate-400 pt-0.5">
                   {cap.timestamp}
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs font-semibold text-slate-300 mb-0.5">
+                  <div className="text-xs font-bold text-[#0f172a] mb-0.5">
                     {cap.speakerName}{' '}
                     <span className="text-[10px] text-slate-500 font-normal">
                       ({cap.speakerRole})
                     </span>
                   </div>
-                  <div className="text-xs sm:text-sm text-slate-200 leading-relaxed">
+                  <div className="text-xs sm:text-sm text-slate-800 leading-relaxed font-normal">
                     {cap.text}
                   </div>
                 </div>

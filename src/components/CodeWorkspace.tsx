@@ -6,17 +6,12 @@ import {
   Terminal, 
   Sparkles, 
   Share2, 
-  RotateCcw, 
   FileCode, 
   Copy, 
   Check, 
   Cpu, 
   Clock, 
-  Database,
-  Plus,
-  Trash2,
-  Maximize2,
-  ChevronDown
+  Database 
 } from 'lucide-react';
 import { CodeFile, TerminalLog } from '@/types/meeting';
 import { executeCodeInSandbox } from '@/lib/code-runner';
@@ -99,13 +94,13 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   const getLanguageColor = (lang: string) => {
     switch (lang) {
       case 'typescript':
-        return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+        return 'text-blue-700 bg-blue-50 border-blue-200';
       case 'python':
-        return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        return 'text-amber-800 bg-amber-50 border-amber-200';
       case 'sql':
-        return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        return 'text-emerald-800 bg-emerald-50 border-emerald-200';
       default:
-        return 'text-purple-400 bg-purple-500/10 border-purple-500/20';
+        return 'text-slate-800 bg-slate-100 border-slate-200';
     }
   };
 
@@ -118,9 +113,9 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   });
 
   return (
-    <div className="w-full h-full flex flex-col bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-      {/* Top Bar: File Tabs & Action Controls */}
-      <div className="h-12 bg-slate-900 border-b border-slate-800 px-3 flex items-center justify-between select-none">
+    <div className="w-full h-full flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm select-none">
+      {/* Top Bar: File Tabs & Action Controls (White Background with Navy Blue Accents) */}
+      <div className="h-12 bg-white border-b border-slate-200 px-3 flex items-center justify-between">
         {/* Left: Tab list */}
         <div className="flex items-center space-x-1 overflow-x-auto py-1">
           {files.map((file) => {
@@ -129,19 +124,16 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
               <button
                 key={file.id}
                 onClick={() => onSelectFile(file.id)}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-all ${
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
                   isActive
-                    ? 'bg-slate-800 text-white border border-slate-700 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-[#0f172a] text-white shadow-sm'
+                    : 'text-slate-600 hover:text-[#0f172a] hover:bg-slate-100'
                 }`}
               >
-                <FileCode className={`w-3.5 h-3.5 ${
-                  file.language === 'typescript' ? 'text-blue-400' :
-                  file.language === 'python' ? 'text-amber-400' : 'text-emerald-400'
-                }`} />
+                <FileCode className={`w-3.5 h-3.5 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
                 <span>{file.name}</span>
                 {file.isEntrypoint && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" title="Main Entrypoint" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" title="Main Entrypoint" />
                 )}
               </button>
             );
@@ -152,7 +144,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
         <div className="flex items-center space-x-2">
           {/* Language indicator badge */}
           {activeFile && (
-            <span className={`hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-semibold border ${getLanguageColor(activeFile.language)}`}>
+            <span className={`hidden sm:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${getLanguageColor(activeFile.language)}`}>
               {activeFile.language}
             </span>
           )}
@@ -160,17 +152,17 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           {/* Ask AI about this code */}
           <button
             onClick={() => activeFile && onAskAIAboutCode(activeFile.name, activeFile.content)}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-medium transition-colors"
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 text-xs font-bold transition-colors shadow-sm"
             title="Ask Gemini AI to review this code for performance, security, and partner takeaways"
           >
-            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
             <span className="hidden md:inline">Explain with AI</span>
           </button>
 
           {/* Share to meeting chat */}
           <button
             onClick={() => activeFile && onShareToChat(activeFile.name, activeFile.content, activeFile.language)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-[#0f172a] hover:bg-slate-100 transition-colors"
             title="Broadcast code snippet to Meeting Chat"
           >
             <Share2 className="w-3.5 h-3.5" />
@@ -179,17 +171,17 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           {/* Copy Code */}
           <button
             onClick={handleCopyCode}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-500 hover:text-[#0f172a] hover:bg-slate-100 transition-colors"
             title="Copy code to clipboard"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
 
-          {/* Run Code Button */}
+          {/* Run Code Button (Deep Navy) */}
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center space-x-1.5 px-3.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition-all active:scale-95"
+            className="flex items-center space-x-1.5 px-3.5 py-1 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] disabled:opacity-50 text-white text-xs font-bold shadow-md shadow-slate-900/10 transition-all active:scale-95"
           >
             <Play className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : 'fill-white'}`} />
             <span>{isRunning ? 'Running...' : 'Run in Sandbox'}</span>
@@ -197,12 +189,12 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
         </div>
       </div>
 
-      {/* Center: Split Editor (Top) & Terminal (Bottom) */}
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Center: Split Editor & Terminal in Deep Navy Workspace */}
+      <div className="flex-1 flex flex-col min-h-0 bg-[#0a192f]">
         {/* Editor Area */}
-        <div className="flex-1 relative overflow-auto flex bg-[#0c1017]">
+        <div className="flex-1 relative overflow-auto flex bg-[#0a192f]">
           {/* Line Numbers Bar */}
-          <div className="w-12 py-3 bg-[#090d14] text-slate-600 text-xs font-mono text-right pr-3 select-none border-r border-slate-800/80 leading-6">
+          <div className="w-12 py-3 bg-[#071324] text-slate-500 text-xs font-mono text-right pr-3 select-none border-r border-[#1e293b] leading-6">
             {activeFile?.content.split('\n').map((_, index) => (
               <div key={index}>{index + 1}</div>
             ))}
@@ -214,41 +206,41 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
               value={activeFile?.content || ''}
               onChange={(e) => activeFile && onUpdateFileContent(activeFile.id, e.target.value)}
               spellCheck={false}
-              className="w-full h-full p-3 bg-transparent text-slate-200 font-mono text-xs sm:text-sm leading-6 resize-none focus:outline-none selection:bg-violet-600/40"
+              className="w-full h-full p-3 bg-transparent text-slate-100 font-mono text-xs sm:text-sm leading-6 resize-none focus:outline-none selection:bg-blue-600/50"
               placeholder="// Write or paste code here..."
             />
           </div>
         </div>
 
         {/* Integrated Terminal Pane */}
-        <div className="h-44 sm:h-52 bg-slate-950 border-t border-slate-800 flex flex-col">
+        <div className="h-44 sm:h-52 bg-[#050c18] border-t border-[#1e293b] flex flex-col">
           {/* Terminal Tabs & Metrics Bar */}
-          <div className="h-8 bg-slate-900/90 border-b border-slate-800 px-3 flex items-center justify-between text-xs select-none">
+          <div className="h-8 bg-[#071324] border-b border-[#1e293b] px-3 flex items-center justify-between text-xs select-none">
             <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1.5 text-slate-400 font-mono text-[11px] pr-2 border-r border-slate-700/60">
-                <Terminal className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="flex items-center space-x-1.5 text-slate-400 font-mono text-[11px] pr-2 border-r border-slate-700">
+                <Terminal className="w-3.5 h-3.5 text-blue-400" />
                 <span>TERMINAL</span>
               </div>
               <button
                 onClick={() => setActiveTerminalTab('all')}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                  activeTerminalTab === 'all' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                  activeTerminalTab === 'all' ? 'bg-[#1e293b] text-white' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 All Logs
               </button>
               <button
                 onClick={() => setActiveTerminalTab('stdout')}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                  activeTerminalTab === 'stdout' ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                  activeTerminalTab === 'stdout' ? 'bg-[#1e293b] text-emerald-400' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Stdout
               </button>
               <button
                 onClick={() => setActiveTerminalTab('stderr')}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
-                  activeTerminalTab === 'stderr' ? 'bg-slate-800 text-red-400' : 'text-slate-400 hover:text-slate-200'
+                className={`px-2 py-0.5 rounded text-[11px] font-bold transition-colors ${
+                  activeTerminalTab === 'stderr' ? 'bg-[#1e293b] text-red-400' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Errors
@@ -258,11 +250,11 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
             {/* Performance Benchmark Highlights */}
             <div className="hidden sm:flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
               <div className="flex items-center space-x-1">
-                <Clock className="w-3 h-3 text-cyan-400" />
+                <Clock className="w-3 h-3 text-blue-400" />
                 <span>{benchmarkMetrics.timeMs}ms</span>
               </div>
               <div className="flex items-center space-x-1">
-                <Cpu className="w-3 h-3 text-violet-400" />
+                <Cpu className="w-3 h-3 text-indigo-400" />
                 <span>{benchmarkMetrics.cpu} CPU</span>
               </div>
               <div className="flex items-center space-x-1">
@@ -273,12 +265,12 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           </div>
 
           {/* Terminal Console Output */}
-          <div className="flex-1 p-3 overflow-y-auto font-mono text-xs space-y-1 bg-[#070a0f]">
+          <div className="flex-1 p-3 overflow-y-auto font-mono text-xs space-y-1 bg-[#050c18]">
             {filteredLogs.map((log) => {
               let colorClass = 'text-slate-300';
               if (log.type === 'stderr') colorClass = 'text-red-400 bg-red-950/20 px-1 py-0.5 rounded';
-              if (log.type === 'system') colorClass = 'text-cyan-400/90';
-              if (log.type === 'benchmark') colorClass = 'text-violet-400 font-semibold border-t border-slate-800/80 pt-1 mt-1';
+              if (log.type === 'system') colorClass = 'text-blue-400 font-medium';
+              if (log.type === 'benchmark') colorClass = 'text-indigo-400 font-bold border-t border-slate-800 pt-1 mt-1';
 
               return (
                 <div key={log.id} className="flex items-start space-x-2 leading-relaxed">
