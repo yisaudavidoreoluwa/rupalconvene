@@ -7,7 +7,10 @@ export async function GET(request: Request) {
   const next = requestUrl.searchParams.get('next') || '/';
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+  const supabaseAnonKey = 
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
+    '';
 
   if (code && supabaseUrl && supabaseAnonKey) {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
