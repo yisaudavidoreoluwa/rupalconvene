@@ -21,11 +21,6 @@ export async function GET(request: Request) {
     }
   }
 
-  // Always route to production domain unless already running on a custom Vercel preview domain
-  const prodUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rupalconvene.vercel.app';
-  const targetBase = requestUrl.origin.includes('vercel.app') 
-    ? requestUrl.origin 
-    : prodUrl;
-
-  return NextResponse.redirect(new URL(next, targetBase));
+  // Always route directly to production domain
+  return NextResponse.redirect(new URL(next, 'https://rupalconvene.vercel.app'));
 }

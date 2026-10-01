@@ -141,11 +141,7 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
 
       // If Supabase is configured and this is an OAuth provider
       if (supabase && isSupabaseConfigured() && (provider === 'google' || provider === 'github' || provider === 'discord')) {
-        const prodUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rupalconvene.vercel.app';
-        const targetRedirect = 
-          typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
-            ? `${window.location.origin}/auth/callback`
-            : `${prodUrl.replace(/\/$/, '')}/auth/callback`;
+        const targetRedirect = 'https://rupalconvene.vercel.app/auth/callback';
 
         const { error } = await supabase.auth.signInWithOAuth({
           provider: provider as 'google' | 'github' | 'discord',

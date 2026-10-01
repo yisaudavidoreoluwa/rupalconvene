@@ -28,7 +28,7 @@ cd C:\Users\HP\Desktop\rupal-convene
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [https://rupalconvene.vercel.app](https://rupalconvene.vercel.app) in your browser.
 
 ---
 
