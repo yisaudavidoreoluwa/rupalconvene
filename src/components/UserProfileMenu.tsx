@@ -69,7 +69,7 @@ export function UserProfileMenu() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return (
       <button
         onClick={() => openAuthModal('login')}

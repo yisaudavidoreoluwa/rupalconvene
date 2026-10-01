@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
     }
 
-    const existing = dbFindUserByEmail(email);
+    const existing = await dbFindUserByEmail(email);
     if (existing) {
       return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = password ? hashPassword(password) : undefined;
     const avatar = getUserAvatar(undefined, name);
 
-    const newUser = dbCreateUser({
+    const newUser = await dbCreateUser({
       id,
       name,
       email,

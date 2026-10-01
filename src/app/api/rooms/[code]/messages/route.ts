@@ -9,11 +9,11 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const room = dbGetRoomByCode(code);
+    const room = await dbGetRoomByCode(code);
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
-    const messages = dbGetMessages(room.id);
+    const messages = await dbGetMessages(room.id);
     return NextResponse.json({ success: true, messages });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -26,7 +26,7 @@ export async function POST(
 ) {
   try {
     const { code } = await params;
-    const room = dbGetRoomByCode(code);
+    const room = await dbGetRoomByCode(code);
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
@@ -41,7 +41,7 @@ export async function POST(
     const msgId = 'msg_' + crypto.randomUUID().slice(0, 10);
     const senderAvatar = body.senderAvatar || getUserAvatar(undefined, senderName || 'User');
 
-    dbSaveMessage({
+    await dbSaveMessage({
       id: msgId,
       roomId: room.id,
       senderId: senderId || 'user_' + crypto.randomUUID().slice(0, 6),
@@ -53,7 +53,7 @@ export async function POST(
       codeSnippet,
     });
 
-    const messages = dbGetMessages(room.id);
+    const messages = await dbGetMessages(room.id);
     return NextResponse.json({ success: true, messages }, { status: 201 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

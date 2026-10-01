@@ -12,15 +12,15 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const room = dbGetRoomByCode(code);
+    const room = await dbGetRoomByCode(code);
 
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    const participants = dbGetParticipants(room.id);
-    const messages = dbGetMessages(room.id);
-    const codeFiles = dbGetCodeFiles(room.id);
+    const participants = await dbGetParticipants(room.id);
+    const messages = await dbGetMessages(room.id);
+    const codeFiles = await dbGetCodeFiles(room.id);
 
     return NextResponse.json({
       success: true,

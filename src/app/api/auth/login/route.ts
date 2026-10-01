@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    const user = dbFindUserByEmail(email);
+    const user = await dbFindUserByEmail(email);
     if (!user) {
       return NextResponse.json({ error: 'User not found. Please register.' }, { status: 404 });
     }

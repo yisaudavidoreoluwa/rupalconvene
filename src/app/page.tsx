@@ -52,10 +52,17 @@ export default function Home() {
 }
 
 function ConferenceApp() {
-  const { user } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
-  // Lobby gate: When true, shows "Ready to join?" lobby; when false, in live conference call
-  const [inLobby, setInLobby] = useState(false);
+  // Lobby gate: Defaults to true so users land on the Pre-Join Lobby
+  const [inLobby, setInLobby] = useState(true);
+
+  // Strictly enforce authentication gate: if user logs out, return to lobby
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setInLobby(true);
+    }
+  }, [isAuthenticated]);
 
   // Conference Suite State
   const [roomCode, setRoomCode] = useState('RUPAL-804-SYNC');
@@ -116,7 +123,7 @@ function ConferenceApp() {
     }
   }, [user]);
 
-  // Initialize room in SQLite database on mount / roomCode change
+  // Initialize room in database on mount / roomCode change
   useEffect(() => {
     async function initRoom() {
       try {
@@ -126,10 +133,10 @@ function ConferenceApp() {
           body: JSON.stringify({
             roomCode,
             title: meetingTitle,
-            hostId: user.id,
-            hostName: user.name,
-            hostRole: user.role,
-            hostAvatar: user.avatar,
+            hostId: user?.id || 'host_default',
+            hostName: user?.name || 'Conference Host',
+            hostRole: user?.role || 'developer',
+            hostAvatar: user?.avatar || '',
           })
         });
         const data = await res.json();
@@ -146,7 +153,7 @@ function ConferenceApp() {
       }
     }
     initRoom();
-  }, [roomCode, meetingTitle, user.id, user.name, user.role, user.avatar]);
+  }, [roomCode, meetingTitle, user?.id, user?.name, user?.role, user?.avatar]);
 
   // Local media stream reference
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -354,8 +361,8 @@ function ConferenceApp() {
     }
   };
 
-  // If in Pre-Join Lobby screen
-  if (inLobby) {
+  // If in Pre-Join Lobby screen or unauthenticated
+  if (inLobby || !isAuthenticated) {
     return (
       <>
         <PreJoinLobby
@@ -364,6 +371,10 @@ function ConferenceApp() {
           participants={participants}
           currentUser={currentUser}
           onJoinMeeting={(startTab) => {
+            if (!isAuthenticated) {
+              openAuthModal('login');
+              return;
+            }
             if (startTab) setActiveTab(startTab);
             setInLobby(false);
           }}

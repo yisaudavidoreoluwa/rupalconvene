@@ -7,11 +7,11 @@ export async function GET(
 ) {
   try {
     const { code } = await params;
-    const room = dbGetRoomByCode(code);
+    const room = await dbGetRoomByCode(code);
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
-    const files = dbGetCodeFiles(room.id);
+    const files = await dbGetCodeFiles(room.id);
     return NextResponse.json({ success: true, files });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -24,7 +24,7 @@ export async function POST(
 ) {
   try {
     const { code } = await params;
-    const room = dbGetRoomByCode(code);
+    const room = await dbGetRoomByCode(code);
     if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
@@ -32,7 +32,7 @@ export async function POST(
     const body = await req.json();
     const { id, name, language, content, isEntrypoint } = body;
 
-    dbSaveCodeFile({
+    await dbSaveCodeFile({
       id: id || 'file_' + Date.now().toString(36),
       roomId: room.id,
       name: name || 'file.ts',
@@ -41,7 +41,7 @@ export async function POST(
       isEntrypoint: Boolean(isEntrypoint),
     });
 
-    const files = dbGetCodeFiles(room.id);
+    const files = await dbGetCodeFiles(room.id);
     return NextResponse.json({ success: true, files });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

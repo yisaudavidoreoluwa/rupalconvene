@@ -5,8 +5,8 @@ import {
   dbGetRecentRooms, 
   dbAddParticipant, 
   dbSaveMessage, 
-  dbSaveCodeFile,
-  dbGetRoomByCode
+  dbSaveCodeFile, 
+  dbGetRoomByCode 
 } from '@/lib/db';
 import { getUserAvatar } from '@/lib/avatar';
 
@@ -19,7 +19,7 @@ function generateRoomCode(): string {
 
 export async function GET() {
   try {
-    const rooms = dbGetRecentRooms(20);
+    const rooms = await dbGetRecentRooms(20);
     return NextResponse.json({ success: true, rooms });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to list rooms' }, { status: 500 });
@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
     const hostAvatar = body.hostAvatar || getUserAvatar(undefined, hostName);
 
     // Check if room already exists
-    let room = dbGetRoomByCode(roomCode);
+    let room = await dbGetRoomByCode(roomCode);
     if (!room) {
-      room = dbCreateRoom({
+      room = await dbCreateRoom({
         roomCode,
         title,
         description: body.description || 'Live WebRTC conference session by Rupal Convene',
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Add Host as initial participant
-      dbAddParticipant({
+      await dbAddParticipant({
         id: hostId,
         roomId: room!.id,
         userId: hostId,
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       });
 
       // Initialize clean starter code file
-      dbSaveCodeFile({
+      await dbSaveCodeFile({
         id: 'file_main',
         roomId: room!.id,
         name: 'index.ts',
@@ -78,7 +78,7 @@ main();`,
       });
 
       // Add clean initial system message
-      dbSaveMessage({
+      await dbSaveMessage({
         id: 'msg_welcome_' + Date.now(),
         roomId: room!.id,
         senderId: 'system',

@@ -64,11 +64,11 @@ export async function authenticateOAuthUser(provider: 'google' | 'github' | 'dis
   organization?: string;
   jobTitle?: string;
 }) {
-  let existingUser = dbFindUserByEmail(profile.email);
+  let existingUser = await dbFindUserByEmail(profile.email);
 
   if (!existingUser) {
     const id = `user_${provider}_` + crypto.randomUUID().slice(0, 8);
-    existingUser = dbCreateUser({
+    existingUser = await dbCreateUser({
       id,
       name: profile.name,
       email: profile.email,

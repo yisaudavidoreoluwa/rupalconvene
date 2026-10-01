@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
     }
 
-    const user = dbFindUserById(payload.sub);
+    const user = await dbFindUserById(payload.sub);
     if (!user) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 404 });
     }
