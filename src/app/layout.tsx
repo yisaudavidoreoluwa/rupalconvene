@@ -26,6 +26,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+                window.location.replace('https://rupalconvene.vercel.app' + window.location.pathname + window.location.search + window.location.hash);
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="bg-white text-slate-900 antialiased selection:bg-blue-500 selection:text-white min-h-screen overflow-x-hidden">
         {children}
       </body>

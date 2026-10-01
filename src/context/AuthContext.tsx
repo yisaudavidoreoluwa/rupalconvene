@@ -41,6 +41,18 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
 
       if (supabase && isSupabaseConfigured()) {
         try {
+          if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+              await supabase.auth.exchangeCodeForSession(code);
+              urlParams.delete('code');
+              const remaining = urlParams.toString();
+              const cleanUrl = window.location.pathname + (remaining ? `?${remaining}` : '') + window.location.hash;
+              window.history.replaceState({}, '', cleanUrl);
+            }
+          }
+
           const { data: { session } } = await supabase.auth.getSession();
           if (!mounted) return;
 
