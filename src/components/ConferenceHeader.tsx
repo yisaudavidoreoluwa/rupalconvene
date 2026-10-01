@@ -67,7 +67,10 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(`https://rupal.tech/convene/${roomCode}`);
+    const meetingUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}?room=${roomCode}`
+      : `https://rupalconvene.vercel.app?room=${roomCode}`;
+    navigator.clipboard.writeText(meetingUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

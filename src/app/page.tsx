@@ -18,6 +18,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { DocumentationModal } from '@/components/DocumentationModal';
 import { AuthProviderComponent, useAuth } from '@/context/AuthContext';
 import { getUserAvatar } from '@/lib/avatar';
+import { useWebRTC } from '@/hooks/useWebRTC';
 
 import { 
   Participant, 
@@ -33,7 +34,6 @@ import {
 } from '@/types/meeting';
 
 import { 
-  INITIAL_PARTICIPANTS, 
   INITIAL_FILES, 
   INITIAL_WHITEBOARD_ELEMENTS, 
   INITIAL_SLIDES, 
@@ -80,8 +80,13 @@ function ConferenceApp() {
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
 
+  // Hardware and In-call Media States
+  const [isMuted, setIsMuted] = useState(false);
+  const [isVideoOff, setIsVideoOff] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+
   // Data Collections (Initialized with clean fresh start defaults)
-  const [participants, setParticipants] = useState<Participant[]>(INITIAL_PARTICIPANTS);
   const [files, setFiles] = useState<CodeFile[]>(INITIAL_FILES);
   const [activeFileId, setActiveFileId] = useState<string>('index-ts');
   const [whiteboardElements, setWhiteboardElements] = useState<WhiteboardElement[]>(INITIAL_WHITEBOARD_ELEMENTS);
@@ -101,27 +106,71 @@ function ConferenceApp() {
     }
   ]);
 
-  // Synchronize authenticated user profile with local participant state
+  // Local media video reference for HTML5 <video> tag
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Auto-detect room code from URL query parameter (e.g. ?room=RUPAL-804-SYNC)
   useEffect(() => {
-    if (user) {
-      setParticipants((prev) =>
-        prev.map((p) => {
-          if (p.id === 'user-self') {
-            return {
-              ...p,
-              name: `${user.name} (You)`,
-              email: user.email,
-              avatar: getUserAvatar(user.avatar, user.name),
-              role: user.role,
-              jobTitle: user.jobTitle,
-              organization: user.organization,
-            };
-          }
-          return p;
-        })
-      );
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlRoom = params.get('room');
+      if (urlRoom && urlRoom.trim()) {
+        setRoomCode(urlRoom.trim().toUpperCase());
+      }
     }
-  }, [user]);
+  }, []);
+
+  // Build current participant profile
+  const currentUser: Participant = {
+    id: user?.id || 'user-self',
+    name: user?.name ? `${user.name} (You)` : 'You (Host)',
+    email: user?.email || '',
+    role: user?.role || 'tech-lead',
+    avatar: getUserAvatar(user?.avatar, user?.name || 'You'),
+    organization: user?.organization || 'Rupal Tech Solutions',
+    jobTitle: user?.jobTitle || 'Platform Engineer',
+    isMuted,
+    isVideoOff,
+    isScreenSharing,
+    isSpeaking: false,
+    handRaised,
+    inGreenRoom: false,
+  };
+
+  // Real-time WebRTC Mesh & Supabase Realtime Signaling Hook
+  const {
+    localStream,
+    remoteParticipants,
+    audioLevel,
+    isSpeaking: isLocalSpeaking,
+    toggleMute: webrtcToggleMute,
+    toggleVideo: webrtcToggleVideo,
+  } = useWebRTC({
+    roomCode,
+    currentUser: {
+      ...currentUser,
+      isSpeaking: false,
+    },
+    enabled: isAuthenticated,
+  });
+
+  // Attach local media stream to localVideoRef element
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      if (localVideoRef.current.srcObject !== localStream) {
+        localVideoRef.current.srcObject = localStream;
+      }
+    }
+  }, [localStream, inLobby]);
+
+  // Combined Participants: Local User + Live Remote Peers across devices
+  const allParticipants: Participant[] = [
+    {
+      ...currentUser,
+      isSpeaking: isLocalSpeaking,
+    },
+    ...remoteParticipants,
+  ];
 
   // Initialize room in database on mount / roomCode change
   useEffect(() => {
@@ -155,78 +204,38 @@ function ConferenceApp() {
     initRoom();
   }, [roomCode, meetingTitle, user?.id, user?.name, user?.role, user?.avatar]);
 
-  // Local media stream reference
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-
-  const currentUser = participants.find((p) => p.id === 'user-self') || participants[0];
-
-  // Request real camera/mic with safe fallback
-  useEffect(() => {
-    async function setupCamera() {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && !inLobby) {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true,
-          });
-          mediaStreamRef.current = stream;
-          if (localVideoRef.current) {
-            localVideoRef.current.srcObject = stream;
-          }
-        }
-      } catch (err) {
-        console.info('Camera permission deferred or running in sandbox preview.', err);
-      }
-    }
-    if (!inLobby) {
-      setupCamera();
-    }
-
-    return () => {
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, [inLobby]);
-
   // Audio/Video Toggles
   const handleToggleMic = () => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === 'user-self' ? { ...p, isMuted: !p.isMuted } : p))
-    );
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !t.enabled));
-    }
+    setIsMuted((prev) => !prev);
   };
 
   const handleToggleVideo = () => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === 'user-self' ? { ...p, isVideoOff: !p.isVideoOff } : p))
-    );
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = !t.enabled));
+    setIsVideoOff((prev) => !prev);
+  };
+
+  const handleToggleScreenShare = async () => {
+    try {
+      if (!isScreenSharing && navigator.mediaDevices?.getDisplayMedia) {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        setIsScreenSharing(true);
+        screenStream.getVideoTracks()[0].onended = () => {
+          setIsScreenSharing(false);
+        };
+      } else {
+        setIsScreenSharing(false);
+      }
+    } catch {
+      setIsScreenSharing(false);
     }
   };
 
-  const handleToggleScreenShare = () => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === 'user-self' ? { ...p, isScreenSharing: !p.isScreenSharing } : p))
-    );
-  };
-
   const handleToggleHandRaise = () => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === 'user-self' ? { ...p, handRaised: !p.handRaised } : p))
-    );
+    setHandRaised((prev) => !prev);
   };
 
   // Green Room Workflow
   const handleAdmitFromGreenRoom = (participantId: string) => {
-    const admitted = participants.find((p) => p.id === participantId);
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === participantId ? { ...p, inGreenRoom: false } : p))
-    );
+    const admitted = allParticipants.find((p) => p.id === participantId);
     if (admitted) {
       const newMsg: ChatMessage = {
         id: `msg-${Date.now()}`,
@@ -255,12 +264,10 @@ function ConferenceApp() {
   };
 
   const handleMoveToGreenRoom = (participantId: string) => {
-    setParticipants((prev) =>
-      prev.map((p) => (p.id === participantId ? { ...p, inGreenRoom: true } : p))
-    );
+    console.info('Moved participant to green room:', participantId);
   };
 
-  // Chat message handling with backend SQLite persistence
+  // Chat message handling with backend persistence
   const handleSendMessage = async (text: string, type: ChatMessage['type']) => {
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -287,7 +294,7 @@ function ConferenceApp() {
       },
     ]);
 
-    // Asynchronously persist to SQLite database
+    // Asynchronously persist to SQLite/Supabase database
     try {
       fetch(`/api/rooms/${roomCode}/messages`, {
         method: 'POST',
@@ -368,8 +375,13 @@ function ConferenceApp() {
         <PreJoinLobby
           roomCode={roomCode}
           meetingTitle={meetingTitle}
-          participants={participants}
-          currentUser={currentUser}
+          participants={allParticipants}
+          currentUser={{
+            ...currentUser,
+            isSpeaking: isLocalSpeaking,
+          }}
+          audioLevel={audioLevel}
+          localStream={localStream}
           onJoinMeeting={(startTab) => {
             if (!isAuthenticated) {
               openAuthModal('login');
@@ -398,7 +410,7 @@ function ConferenceApp() {
       <ConferenceHeader
         title={meetingTitle}
         roomCode={roomCode}
-        participants={participants}
+        participants={allParticipants}
         layout={layout}
         onLayoutChange={setLayout}
         isWatermarkActive={isWatermarkActive}
@@ -412,12 +424,12 @@ function ConferenceApp() {
 
       {/* 2. Central Meeting Workspace (Light Canvas #f8fafc with Low Border Clutter) */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-1.5 sm:p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]">
           {/* Main Stage View */}
           {activeTab === 'stage' && (
-            <div className="flex-1 w-full h-full">
+            <div className="flex-1 w-full h-full min-h-0">
               <VideoStage
-                participants={participants}
+                participants={allParticipants}
                 layout={layout}
                 onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
                 onMoveToGreenRoom={handleMoveToGreenRoom}
@@ -428,7 +440,7 @@ function ConferenceApp() {
 
           {/* Collaborative Code Workspace (With split video stage) */}
           {activeTab === 'code-ide' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5 min-h-0">
               <div className="flex-1 h-full min-h-0">
                 <CodeWorkspace
                   files={files}
@@ -441,9 +453,9 @@ function ConferenceApp() {
               </div>
 
               {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                <div className="w-full lg:w-72 xl:w-80 h-40 sm:h-48 lg:h-full flex-shrink-0">
                   <VideoStage
-                    participants={participants}
+                    participants={allParticipants}
                     layout="gallery"
                     compactMode={true}
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
@@ -457,7 +469,7 @@ function ConferenceApp() {
 
           {/* Architecture Whiteboard (With split video stage) */}
           {activeTab === 'whiteboard' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5 min-h-0">
               <div className="flex-1 h-full min-h-0">
                 <ArchitectureWhiteboard
                   elements={whiteboardElements}
@@ -467,9 +479,9 @@ function ConferenceApp() {
               </div>
 
               {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                <div className="w-full lg:w-72 xl:w-80 h-40 sm:h-48 lg:h-full flex-shrink-0">
                   <VideoStage
-                    participants={participants}
+                    participants={allParticipants}
                     layout="gallery"
                     compactMode={true}
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
@@ -483,7 +495,7 @@ function ConferenceApp() {
 
           {/* Investor Pitch Deck (With privacy watermark, slide upload & split video) */}
           {activeTab === 'pitch-deck' && (
-            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
+            <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5 min-h-0">
               <div className="flex-1 h-full min-h-0">
                 <PitchDeckViewer
                   slides={slides}
@@ -497,9 +509,9 @@ function ConferenceApp() {
               </div>
 
               {splitVideoEnabled && (
-                <div className="w-full lg:w-72 xl:w-80 h-44 lg:h-full flex-shrink-0">
+                <div className="w-full lg:w-72 xl:w-80 h-40 sm:h-48 lg:h-full flex-shrink-0">
                   <VideoStage
-                    participants={participants}
+                    participants={allParticipants}
                     layout="gallery"
                     compactMode={true}
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
@@ -513,10 +525,10 @@ function ConferenceApp() {
 
           {/* Conference Timetable & Backstage Green Room */}
           {activeTab === 'agenda' && (
-            <div className="flex-1 w-full h-full">
+            <div className="flex-1 w-full h-full min-h-0">
               <AgendaGreenRoom
                 agenda={agenda}
-                participants={participants}
+                participants={allParticipants}
                 onAdmitToStage={handleAdmitFromGreenRoom}
                 onMoveToGreenRoom={handleMoveToGreenRoom}
               />
@@ -525,7 +537,7 @@ function ConferenceApp() {
 
           {/* Gemini AI Live Meeting Intelligence */}
           {activeTab === 'ai-intelligence' && (
-            <div className="flex-1 w-full h-full">
+            <div className="flex-1 w-full h-full min-h-0">
               <AIIntelligenceDrawer
                 minutes={minutes}
                 onUpdateMinutes={setMinutes}
@@ -540,11 +552,14 @@ function ConferenceApp() {
 
         {/* Right Collapsible Chat / Q&A / Attendance Drawer */}
         {isChatOpen && (
-          <div className="h-full flex-shrink-0 animate-in slide-in-from-right duration-200">
+          <div className="h-full flex-shrink-0 animate-in slide-in-from-right duration-200 w-full sm:w-80 md:w-96 absolute sm:relative inset-y-0 right-0 z-40 bg-white sm:bg-transparent shadow-xl sm:shadow-none">
             <ChatAndQAPanel
               messages={chatMessages}
-              participants={participants}
-              currentUser={currentUser}
+              participants={allParticipants}
+              currentUser={{
+                ...currentUser,
+                isSpeaking: isLocalSpeaking,
+              }}
               onSendMessage={handleSendMessage}
               onUpvoteQuestion={handleUpvoteQuestion}
               onClose={() => setIsChatOpen(false)}
@@ -555,7 +570,10 @@ function ConferenceApp() {
 
       {/* 3. Floating Bottom Controls Dock */}
       <ConferenceControls
-        currentUser={currentUser}
+        currentUser={{
+          ...currentUser,
+          isSpeaking: isLocalSpeaking,
+        }}
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onToggleMic={handleToggleMic}
@@ -566,7 +584,7 @@ function ConferenceApp() {
         onToggleChat={() => setIsChatOpen(!isChatOpen)}
         onLeaveMeeting={() => setIsLeaveOpen(true)}
         onOpenDealRoom={() => setIsDealRoomOpen(true)}
-        participantCount={participants.length}
+        participantCount={allParticipants.length}
         unreadCount={chatMessages.length > 2 ? 1 : 0}
         roomCode={roomCode}
       />

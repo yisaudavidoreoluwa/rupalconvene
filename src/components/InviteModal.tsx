@@ -18,7 +18,9 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
 
   if (!isOpen) return null;
 
-  const meetingUrl = `https://rupal.tech/convene/${roomCode}`;
+  const meetingUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}?room=${roomCode}`
+    : `https://rupalconvene.vercel.app?room=${roomCode}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(meetingUrl);

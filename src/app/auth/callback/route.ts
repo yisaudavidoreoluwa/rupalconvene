@@ -13,10 +13,19 @@ export async function GET(request: Request) {
     '';
 
   if (code && supabaseUrl && supabaseAnonKey) {
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    await supabase.auth.exchangeCodeForSession(code);
+    try {
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      await supabase.auth.exchangeCodeForSession(code);
+    } catch (e) {
+      console.error('Error exchanging auth code:', e);
+    }
   }
 
-  // Redirect user back to the application
-  return NextResponse.redirect(new URL(next, requestUrl.origin));
+  // Always route to production domain unless already running on a custom Vercel preview domain
+  const prodUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://rupalconvene.vercel.app';
+  const targetBase = requestUrl.origin.includes('vercel.app') 
+    ? requestUrl.origin 
+    : prodUrl;
+
+  return NextResponse.redirect(new URL(next, targetBase));
 }
