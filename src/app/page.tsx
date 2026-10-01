@@ -17,6 +17,7 @@ import { LeaveModal } from '@/components/LeaveModal';
 import { AuthModal } from '@/components/AuthModal';
 import { DocumentationModal } from '@/components/DocumentationModal';
 import { AuthProviderComponent, useAuth } from '@/context/AuthContext';
+import { getUserAvatar } from '@/lib/avatar';
 
 import { 
   Participant, 
@@ -57,8 +58,8 @@ function ConferenceApp() {
   const [inLobby, setInLobby] = useState(false);
 
   // Conference Suite State
-  const [roomCode, setRoomCode] = useState('RUPAL-901-SYNC');
-  const [meetingTitle, setMeetingTitle] = useState('Synthetix Architecture & Series B Syndicate Review');
+  const [roomCode, setRoomCode] = useState('RUPAL-804-SYNC');
+  const [meetingTitle, setMeetingTitle] = useState('Engineering Architecture & Strategic Review');
   const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('stage');
   const [layout, setLayout] = useState<StageLayout>('gallery');
   const [isWatermarkActive, setIsWatermarkActive] = useState(true);
@@ -72,41 +73,25 @@ function ConferenceApp() {
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
 
-  // Data Collections
+  // Data Collections (Initialized with clean fresh start defaults)
   const [participants, setParticipants] = useState<Participant[]>(INITIAL_PARTICIPANTS);
   const [files, setFiles] = useState<CodeFile[]>(INITIAL_FILES);
-  const [activeFileId, setActiveFileId] = useState<string>('gateway-ts');
+  const [activeFileId, setActiveFileId] = useState<string>('index-ts');
   const [whiteboardElements, setWhiteboardElements] = useState<WhiteboardElement[]>(INITIAL_WHITEBOARD_ELEMENTS);
-  const [slides] = useState<PitchSlide[]>(INITIAL_SLIDES);
+  const [slides, setSlides] = useState<PitchSlide[]>(INITIAL_SLIDES);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [agenda, setAgenda] = useState<AgendaItem[]>(INITIAL_AGENDA);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(INITIAL_CHAT);
   const [minutes, setMinutes] = useState<MeetingMinutes>(INITIAL_MINUTES);
   const [captions, setCaptions] = useState<LiveCaption[]>([
     {
-      id: 'cap-1',
-      speakerId: 'user-partner-1',
-      speakerName: 'Elena Rostova',
-      speakerRole: 'investor',
-      text: 'Alex, we reviewed the Series B allocation with Vanguard partners. Our key condition is verifying p99 sub-2ms latency under peak load.',
-      timestamp: '14:31',
-    },
-    {
-      id: 'cap-2',
+      id: 'cap-welcome',
       speakerId: 'user-self',
-      speakerName: 'Alex Vance',
+      speakerName: 'Host',
       speakerRole: 'tech-lead',
-      text: 'Understood Elena. I am running our live gateway rate-limiting implementation right now in the In-Call IDE.',
-      timestamp: '14:32',
-    },
-    {
-      id: 'cap-3',
-      speakerId: 'user-dev-2',
-      speakerName: 'Marcus Chen',
-      speakerRole: 'developer',
-      text: 'And I loaded the streaming anomaly detection pipeline in Python for real-time transaction scoring.',
-      timestamp: '14:33',
-    },
+      text: 'Conference session initialized. Audio and video streams are encrypted with 256-bit DTLS-SRTP.',
+      timestamp: '00:00',
+    }
   ]);
 
   // Synchronize authenticated user profile with local participant state
@@ -117,9 +102,9 @@ function ConferenceApp() {
           if (p.id === 'user-self') {
             return {
               ...p,
-              name: user.name,
+              name: `${user.name} (You)`,
               email: user.email,
-              avatar: user.avatar,
+              avatar: getUserAvatar(user.avatar, user.name),
               role: user.role,
               jobTitle: user.jobTitle,
               organization: user.organization,
@@ -130,6 +115,38 @@ function ConferenceApp() {
       );
     }
   }, [user]);
+
+  // Initialize room in SQLite database on mount / roomCode change
+  useEffect(() => {
+    async function initRoom() {
+      try {
+        const res = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomCode,
+            title: meetingTitle,
+            hostId: user.id,
+            hostName: user.name,
+            hostRole: user.role,
+            hostAvatar: user.avatar,
+          })
+        });
+        const data = await res.json();
+        if (data.success && data.room) {
+          // Fetch existing messages if any
+          const msgRes = await fetch(`/api/rooms/${roomCode}/messages`);
+          const msgData = await msgRes.json();
+          if (msgData.success && msgData.messages && msgData.messages.length > 0) {
+            setChatMessages(msgData.messages);
+          }
+        }
+      } catch (err) {
+        console.info('Database sync running in memory fallback', err);
+      }
+    }
+    initRoom();
+  }, [roomCode, meetingTitle, user.id, user.name, user.role, user.avatar]);
 
   // Local media stream reference
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -165,26 +182,6 @@ function ConferenceApp() {
       }
     };
   }, [inLobby]);
-
-  // Speaker simulation to give real conference feel
-  useEffect(() => {
-    if (inLobby) return;
-
-    const interval = setInterval(() => {
-      const activeStageParticipants = participants.filter((p) => !p.inGreenRoom);
-      if (activeStageParticipants.length > 0) {
-        const randomIdx = Math.floor(Math.random() * activeStageParticipants.length);
-        setParticipants((prev) =>
-          prev.map((p, idx) => ({
-            ...p,
-            isSpeaking: idx === randomIdx,
-          }))
-        );
-      }
-    }, 6000);
-
-    return () => clearInterval(interval);
-  }, [participants, inLobby]);
 
   // Audio/Video Toggles
   const handleToggleMic = () => {
@@ -229,8 +226,8 @@ function ConferenceApp() {
         senderId: 'system',
         senderName: 'Stage Manager',
         senderRole: 'host',
-        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        text: `Elevated ${admitted.name} (${admitted.jobTitle}) from Backstage Green Room to Main Stage.`,
+        senderAvatar: getUserAvatar(undefined, 'Stage Manager'),
+        text: `Elevated ${admitted.name} to Main Stage.`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: 'system',
       };
@@ -243,7 +240,7 @@ function ConferenceApp() {
           speakerId: admitted.id,
           speakerName: admitted.name,
           speakerRole: admitted.role,
-          text: `[Stage Check] Glad to join the main plenum. Our slide decks and models are synced.`,
+          text: `[Joined Stage] Ready to collaborate.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -256,8 +253,8 @@ function ConferenceApp() {
     );
   };
 
-  // Chat message handling
-  const handleSendMessage = (text: string, type: ChatMessage['type']) => {
+  // Chat message handling with backend SQLite persistence
+  const handleSendMessage = async (text: string, type: ChatMessage['type']) => {
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       senderId: currentUser.id,
@@ -282,6 +279,22 @@ function ConferenceApp() {
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       },
     ]);
+
+    // Asynchronously persist to SQLite database
+    try {
+      fetch(`/api/rooms/${roomCode}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderRole: currentUser.role,
+          senderAvatar: currentUser.avatar,
+          type,
+        }),
+      }).catch(() => {});
+    } catch {}
   };
 
   const handleUpvoteQuestion = (messageId: string) => {
@@ -292,11 +305,27 @@ function ConferenceApp() {
     );
   };
 
-  // Code actions
+  // Code actions with backend persistence
   const handleUpdateFileContent = (fileId: string, newContent: string) => {
     setFiles((prev) =>
       prev.map((f) => (f.id === fileId ? { ...f, content: newContent } : f))
     );
+
+    try {
+      const target = files.find((f) => f.id === fileId);
+      if (target) {
+        fetch(`/api/rooms/${roomCode}/files`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: fileId,
+            name: target.name,
+            language: target.language,
+            content: newContent,
+          }),
+        }).catch(() => {});
+      }
+    } catch {}
   };
 
   const handleShareCodeToChat = (fileName: string, code: string, language: string) => {
@@ -318,6 +347,13 @@ function ConferenceApp() {
     setIsChatOpen(true);
   };
 
+  const handleRoomChange = (newCode: string, newTitle?: string) => {
+    setRoomCode(newCode);
+    if (newTitle) {
+      setMeetingTitle(newTitle);
+    }
+  };
+
   // If in Pre-Join Lobby screen
   if (inLobby) {
     return (
@@ -334,6 +370,7 @@ function ConferenceApp() {
           onToggleMic={handleToggleMic}
           onToggleVideo={handleToggleVideo}
           onOpenDocs={() => setIsDocsOpen(true)}
+          onRoomChange={handleRoomChange}
         />
         <DocumentationModal
           isOpen={isDocsOpen}
@@ -433,7 +470,7 @@ function ConferenceApp() {
             </div>
           )}
 
-          {/* Investor Pitch Deck (With privacy watermark & split video) */}
+          {/* Investor Pitch Deck (With privacy watermark, slide upload & split video) */}
           {activeTab === 'pitch-deck' && (
             <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5">
               <div className="flex-1 h-full min-h-0">
@@ -444,6 +481,7 @@ function ConferenceApp() {
                   isWatermarkActive={isWatermarkActive}
                   currentUser={currentUser}
                   onOpenDealRoom={() => setIsDealRoomOpen(true)}
+                  onUploadSlide={(newSlide) => setSlides((prev) => [...prev, newSlide])}
                 />
               </div>
 
@@ -483,6 +521,7 @@ function ConferenceApp() {
                 captions={captions}
                 activeCodeSnippet={files.find((f) => f.id === activeFileId)?.content}
                 currentSlideTitle={slides[currentSlideIndex]?.title}
+                meetingTitle={meetingTitle}
               />
             </div>
           )}
@@ -517,7 +556,7 @@ function ConferenceApp() {
         onLeaveMeeting={() => setIsLeaveOpen(true)}
         onOpenDealRoom={() => setIsDealRoomOpen(true)}
         participantCount={participants.length}
-        unreadCount={chatMessages.length > 3 ? 1 : 0}
+        unreadCount={chatMessages.length > 2 ? 1 : 0}
         roomCode={roomCode}
       />
 

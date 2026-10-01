@@ -24,6 +24,7 @@ interface AIIntelligenceDrawerProps {
   captions: LiveCaption[];
   activeCodeSnippet?: string;
   currentSlideTitle?: string;
+  meetingTitle?: string;
 }
 
 export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
@@ -32,6 +33,7 @@ export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
   captions,
   activeCodeSnippet,
   currentSlideTitle,
+  meetingTitle = 'Rupal Convene Conference Session',
 }) => {
   const [activeTab, setActiveTab] = useState<'minutes' | 'transcript' | 'copilot'>('minutes');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -52,7 +54,7 @@ export const AIIntelligenceDrawer: React.FC<AIIntelligenceDrawerProps> = ({
     try {
       const generated = await requestMeetingMinutes({
         transcript: captions,
-        meetingTitle: 'Synthetix & Rupal Convene Partner Sync',
+        meetingTitle: meetingTitle,
       });
       onUpdateMinutes(generated);
     } catch (e) {

@@ -2,14 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserProfile, AuthProvider } from '@/types/auth';
+import { generateInitialsAvatar, getUserAvatar } from '@/lib/avatar';
 
 interface AuthContextType {
   user: UserProfile;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isAuthModalOpen: boolean;
   authModalMode: 'login' | 'signup';
-  loginWithProvider: (provider: AuthProvider, custom?: Partial<UserProfile>) => Promise<void>;
+  loginWithProvider: (provider: AuthProvider, custom?: Partial<UserProfile> & { password?: string }) => Promise<void>;
+  registerWithEmail: (name: string, email: string, password?: string) => Promise<void>;
   logout: () => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   openAuthModal: (mode?: 'login' | 'signup') => void;
@@ -17,134 +20,179 @@ interface AuthContextType {
 }
 
 const DEFAULT_USER: UserProfile = {
-  id: 'user-self',
-  name: 'Alex Vance',
-  email: 'alex.vance@rupaltech.com',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+  id: 'user_host',
+  name: 'Developer Host',
+  email: 'host@rupalconvene.io',
+  avatar: generateInitialsAvatar('Developer Host'),
   provider: 'google',
   role: 'tech-lead',
   organization: 'Rupal Tech Solutions',
-  jobTitle: 'VP of Platform Engineering',
-  githubUsername: 'alexvance-tech',
-  discordTag: 'AlexV#0001',
+  jobTitle: 'Lead Platform Architect',
   tier: 'Developer Pro',
   isVerified: true,
-  createdAt: '2026-01-15T09:00:00Z',
+  createdAt: '2026-10-01T00:00:00Z',
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'rupal_convene_auth_profile';
+const TOKEN_KEY = 'rupal_convene_auth_token';
 
 export function AuthProviderComponent({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile>(DEFAULT_USER);
+  const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
-  // Load saved profile from localStorage if exists
+  // Load saved session on startup
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
+      const savedUser = localStorage.getItem(STORAGE_KEY);
+      const savedToken = localStorage.getItem(TOKEN_KEY);
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        // Ensure avatar doesn't use old unsplash demo images
+        parsed.avatar = getUserAvatar(parsed.avatar, parsed.name);
         setUser(parsed);
         setIsAuthenticated(true);
+      }
+      if (savedToken) {
+        setToken(savedToken);
       }
     } catch {
       // Ignore localStorage errors
     }
   }, []);
 
-  const loginWithProvider = async (provider: AuthProvider, custom?: Partial<UserProfile>) => {
+  const loginWithProvider = async (
+    provider: AuthProvider,
+    custom?: Partial<UserProfile> & { password?: string }
+  ) => {
     setIsLoading(true);
 
-    // Simulate authentic OAuth handshake
-    await new Promise((resolve) => setTimeout(resolve, 600));
-
-    let newUser: UserProfile;
-
-    if (provider === 'google') {
-      newUser = {
-        id: 'user-google-' + Date.now().toString().slice(-4),
-        name: custom?.name || 'Alex Vance (Google)',
-        email: custom?.email || 'alex.vance@gmail.com',
-        avatar: custom?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        provider: 'google',
-        role: custom?.role || 'tech-lead',
-        organization: custom?.organization || 'Rupal Tech Solutions',
-        jobTitle: custom?.jobTitle || 'Google Partner & Systems Lead',
-        githubUsername: custom?.githubUsername || 'alexvance-tech',
-        tier: 'Developer Pro',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      };
-    } else if (provider === 'github') {
-      newUser = {
-        id: 'user-github-' + Date.now().toString().slice(-4),
-        name: custom?.name || 'Alex Vance (GitHub)',
-        email: custom?.email || 'alex.vance@github.users.noreply',
-        avatar: custom?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        provider: 'github',
-        role: custom?.role || 'developer',
-        organization: custom?.organization || 'Rupal Open Source Ecosystem',
-        jobTitle: custom?.jobTitle || 'Principal Systems Architect',
-        githubUsername: custom?.githubUsername || 'rupal-lead-dev',
-        tier: 'Developer Pro',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      };
-    } else if (provider === 'discord') {
-      newUser = {
-        id: 'user-discord-' + Date.now().toString().slice(-4),
-        name: custom?.name || 'Vance_Convene',
-        email: custom?.email || 'alex.vance@discord.gg',
-        avatar: custom?.avatar || 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-        provider: 'discord',
-        role: custom?.role || 'host',
-        organization: custom?.organization || 'Rupal Developer Guild',
-        jobTitle: custom?.jobTitle || 'Lead Community Architect',
-        discordTag: custom?.discordTag || 'Vance#1337',
-        tier: 'Founding Member',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      };
-    } else {
-      newUser = {
-        id: 'user-custom-' + Date.now().toString().slice(-4),
-        name: custom?.name || 'Partner Guest',
-        email: custom?.email || 'guest@rupaltech.com',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-        provider: provider,
-        role: custom?.role || 'business-partner',
-        organization: custom?.organization || 'Enterprise Syndicate',
-        jobTitle: custom?.jobTitle || 'Executive Delegate',
-        tier: 'Enterprise Partner',
-        isVerified: false,
-        createdAt: new Date().toISOString(),
-      };
-    }
-
-    setUser(newUser);
-    setIsAuthenticated(true);
-    setIsLoading(false);
-    setIsAuthModalOpen(false);
-
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+      const payload = {
+        provider,
+        email: custom?.email,
+        password: custom?.password,
+        name: custom?.name,
+        profile: {
+          email: custom?.email || `${provider}_developer@rupalconvene.io`,
+          name: custom?.name || `${provider.charAt(0).toUpperCase() + provider.slice(1)} Engineer`,
+          avatar: getUserAvatar(custom?.avatar, custom?.name || provider),
+          role: custom?.role || (provider === 'github' ? 'developer' : 'tech-lead'),
+          organization: custom?.organization || 'Rupal Tech Solutions',
+          jobTitle: custom?.jobTitle || (provider === 'github' ? 'Senior Full-Stack Engineer' : 'Lead Architect'),
+        },
+      };
+
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (data.success && data.user) {
+        const updatedUser: UserProfile = {
+          ...data.user,
+          avatar: getUserAvatar(data.user.avatar, data.user.name),
+        };
+        setUser(updatedUser);
+        setToken(data.token);
+        setIsAuthenticated(true);
+        setIsAuthModalOpen(false);
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+          if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
+        } catch {
+          // Ignore
+        }
+      } else {
+        // Fallback local update if offline
+        const localUser: UserProfile = {
+          id: `user_${provider}_` + Date.now().toString(36),
+          name: custom?.name || `${provider.charAt(0).toUpperCase() + provider.slice(1)} Developer`,
+          email: custom?.email || `${provider}@rupalconvene.io`,
+          avatar: getUserAvatar(custom?.avatar, custom?.name || provider),
+          provider,
+          role: custom?.role || 'developer',
+          organization: custom?.organization || 'Rupal Tech Solutions',
+          jobTitle: custom?.jobTitle || 'Software Engineer',
+          tier: 'Developer Pro',
+          isVerified: true,
+          createdAt: new Date().toISOString(),
+        };
+        setUser(localUser);
+        setIsAuthenticated(true);
+        setIsAuthModalOpen(false);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
+        } catch {}
+      }
     } catch {
-      // Ignore
+      // Offline fallback
+      const fallbackUser: UserProfile = {
+        id: `user_${provider}_` + Date.now().toString(36),
+        name: custom?.name || `${provider.charAt(0).toUpperCase() + provider.slice(1)} Member`,
+        email: custom?.email || `${provider}@rupalconvene.io`,
+        avatar: getUserAvatar(undefined, custom?.name || provider),
+        provider,
+        role: custom?.role || 'developer',
+        organization: 'Rupal Tech Solutions',
+        jobTitle: 'Software Engineer',
+        tier: 'Developer Pro',
+        isVerified: true,
+        createdAt: new Date().toISOString(),
+      };
+      setUser(fallbackUser);
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const registerWithEmail = async (name: string, email: string, password?: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        const u = { ...data.user, avatar: getUserAvatar(data.user.avatar, data.user.name) };
+        setUser(u);
+        setToken(data.token);
+        setIsAuthenticated(true);
+        setIsAuthModalOpen(false);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+          if (data.token) localStorage.setItem(TOKEN_KEY, data.token);
+        } catch {}
+      }
+    } catch (e) {
+      console.error('Registration failed', e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
     setIsAuthenticated(false);
+    setToken(null);
     const guestUser: UserProfile = {
       ...DEFAULT_USER,
-      id: 'guest-' + Date.now().toString().slice(-4),
+      id: 'guest_' + Date.now().toString(36),
       name: 'Guest Participant',
       email: 'guest@rupalconvene.io',
+      avatar: generateInitialsAvatar('Guest Participant'),
       provider: 'guest',
       role: 'guest',
       isVerified: false,
@@ -152,6 +200,7 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
     setUser(guestUser);
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(TOKEN_KEY);
     } catch {
       // Ignore
     }
@@ -182,11 +231,13 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
     <AuthContext.Provider
       value={{
         user,
+        token,
         isAuthenticated,
         isLoading,
         isAuthModalOpen,
         authModalMode,
         loginWithProvider,
+        registerWithEmail,
         logout,
         updateProfile,
         openAuthModal,

@@ -7,18 +7,21 @@ import {
   FileText, 
   Download, 
   ShieldCheck, 
-  DollarSign, 
-  CheckCircle, 
   Check, 
-  ExternalLink 
+  Upload 
 } from 'lucide-react';
 
 interface DealRoomModalProps {
   isOpen: boolean;
   onClose: () => void;
+  roomTitle?: string;
 }
 
-export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose }) => {
+export const DealRoomModal: React.FC<DealRoomModalProps> = ({ 
+  isOpen, 
+  onClose,
+  roomTitle = 'Strategic Technical Syndicate'
+}) => {
   const [signed, setSigned] = useState(false);
 
   if (!isOpen) return null;
@@ -37,7 +40,7 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                 Institutional Deal Room & Term Sheet
               </h3>
               <p className="text-xs text-slate-500">
-                Synthetix Series B Strategic Syndicate Room • Rupal Convene Verified
+                {roomTitle} • Protected by Rupal Convene Security
               </p>
             </div>
           </div>
@@ -59,14 +62,14 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                 Syndicate Allocation Status
               </div>
               <div className="text-2xl font-extrabold text-[#0f172a] mt-0.5">
-                $35,000,000 Series B Round
+                Strategic Growth Syndicate
               </div>
               <div className="text-xs text-slate-600 mt-1">
-                Vanguard Ventures (Lead) & Apex Global Strategic (Co-Lead)
+                Verified Enterprise Syndicate Syndicate Partners & Technical Leads
               </div>
             </div>
             <div className="px-3.5 py-1.5 rounded-full bg-white text-blue-700 font-bold text-xs shadow-xs border border-blue-200/60">
-              Open Syndicate
+              Active Room
             </div>
           </div>
 
@@ -77,20 +80,20 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-500 text-xs">Pre-Money Valuation</span>
-                <div className="text-base font-bold text-[#0f172a] mt-0.5">$145M USD</div>
+                <span className="text-slate-500 text-xs">Security Protocol</span>
+                <div className="text-base font-bold text-[#0f172a] mt-0.5">DTLS-SRTP 256-bit</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-500 text-xs">Liquidation Preference</span>
-                <div className="text-base font-bold text-[#0f172a] mt-0.5">1x Non-Participating</div>
+                <span className="text-slate-500 text-xs">Due Diligence Audit</span>
+                <div className="text-base font-bold text-[#0f172a] mt-0.5">Automated AI Ledger</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-500 text-xs">Governance / Board</span>
-                <div className="text-base font-bold text-[#0f172a] mt-0.5">1 Investor / 2 Founders / 1 Indep</div>
+                <span className="text-slate-500 text-xs">Watermark Protection</span>
+                <div className="text-base font-bold text-[#0f172a] mt-0.5">Viewer Cryptographic Hash</div>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                <span className="text-slate-500 text-xs">Information & Audit Rights</span>
-                <div className="text-base font-bold text-[#0f172a] mt-0.5">Monthly Financials + SLA Telemetry</div>
+                <span className="text-slate-500 text-xs">Audit & Telemetry</span>
+                <div className="text-base font-bold text-[#0f172a] mt-0.5">Real-time p99 SLA Logs</div>
               </div>
             </div>
           </div>
@@ -106,15 +109,15 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                   <FileText className="w-5 h-5 text-blue-600" />
                   <div>
                     <div className="text-xs font-bold text-[#0f172a]">
-                      Series_B_Term_Sheet_Executed_Draft_v4.pdf
+                      Executive_Syndicate_Summary.pdf
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      Signed by Legal Counsel • SHA-256 Verified
+                      Standardized Due Diligence Memorandum • SHA-256 Verified
                     </div>
                   </div>
                 </div>
                 <button 
-                  onClick={() => alert('Downloading watermarked Term Sheet PDF with viewer cryptographic watermark')}
+                  onClick={() => alert('Downloading verified summary with viewer cryptographic watermark overlay.')}
                   className="p-2 rounded-xl bg-white hover:bg-slate-200 text-[#0f172a] transition-colors shadow-xs"
                   title="Download confidential copy"
                 >
@@ -127,15 +130,15 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                   <ShieldCheck className="w-5 h-5 text-emerald-600" />
                   <div>
                     <div className="text-xs font-bold text-[#0f172a]">
-                      SOC2_Type_II_Audit_Report_2026.pdf
+                      Architecture_SLA_Telemetry_Report.pdf
                     </div>
                     <div className="text-[11px] text-slate-500">
-                      PwC Attestation • Sub-2ms Latency Benchmark Logs Attached
+                      Latency & Microservices Audit • Signed by Rupal Tech Solutions
                     </div>
                   </div>
                 </div>
                 <button 
-                  onClick={() => alert('Downloading SOC2 Audit Report with encrypted digital signature')}
+                  onClick={() => alert('Downloading SLA report with cryptographic signature.')}
                   className="p-2 rounded-xl bg-white hover:bg-slate-200 text-[#0f172a] transition-colors shadow-xs"
                 >
                   <Download className="w-4 h-4" />
@@ -149,7 +152,7 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
             <div className="flex items-start space-x-2.5">
               <ShieldCheck className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
               <div className="text-xs text-slate-600">
-                <span className="font-bold text-[#0f172a]">Confidentiality Undertaking:</span> All attendees in this syndicate session are bound by the bilateral Rupal Tech Solutions NDA. Proprietary architecture slides and financial models are encrypted.
+                <span className="font-bold text-[#0f172a]">Confidentiality Undertaking:</span> All attendees in this syndicate session are bound by standard bilateral non-disclosure terms. All slides, source files, and whiteboard notes are audited.
               </div>
             </div>
 
@@ -162,14 +165,14 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                   className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
                 />
                 <span className="text-xs font-semibold text-slate-700">
-                  I accept and counter-sign the Syndicate NDA
+                  I accept and counter-sign the Syndicate Agreement
                 </span>
               </label>
 
               <button
                 disabled={!signed}
                 onClick={() => {
-                  alert('NDA electronically counter-signed. Access token logged to audit ledger.');
+                  alert('Agreement electronically confirmed. Signed token recorded in session database.');
                   onClose();
                 }}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm ${
@@ -178,7 +181,7 @@ export const DealRoomModal: React.FC<DealRoomModalProps> = ({ isOpen, onClose })
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                Sign & Access Cap Table
+                Sign & Access Data Room
               </button>
             </div>
           </div>

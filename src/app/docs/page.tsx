@@ -45,11 +45,13 @@ function DocsContent() {
   const navItems = [
     { id: 'quickstart', label: 'Platform Overview', icon: Zap },
     { id: 'auth', label: 'Google, GitHub & Discord OAuth', icon: Key },
+    { id: 'api', label: 'REST API & SQLite Database', icon: Code2 },
+    { id: 'storage', label: 'File Storage & Deck Uploads', icon: ShieldCheck },
     { id: 'webrtc', label: 'WebRTC Mesh & SFU Engine', icon: Cpu },
     { id: 'ide', label: 'In-Call Developer IDE', icon: Terminal },
     { id: 'watermark', label: 'Dynamic Pitch Watermarking', icon: ShieldCheck },
     { id: 'gemini', label: 'Gemini AI Live Copilot', icon: Sparkles },
-    { id: 'sdk', label: 'Rupal Convene Web SDK', icon: Code2 },
+    { id: 'sdk', label: 'Rupal Convene Web SDK', icon: BookOpen },
   ];
 
   return (
@@ -189,6 +191,93 @@ export function LoginButtons() {
   );
 }`}
                   </pre>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'api' && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Endpoints</span>
+                <h1 className="text-3xl font-extrabold text-[#0f172a] mt-1 mb-3">REST API & SQLite Database</h1>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Rupal Convene features a high-performance backend backed by embedded SQLite (<code className="text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">node:sqlite</code>). State for rooms, participants, code files, and messages are automatically preserved with sub-millisecond query execution.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">POST /api/rooms</span>
+                    <span className="text-[11px] text-slate-400">Initialize conference room</span>
+                  </div>
+                  <p className="text-xs text-slate-600">Create an active conference session with initial code buffer and WebRTC signaling tokens.</p>
+                  <div className="p-3 rounded-xl bg-[#0f172a] text-slate-200 font-mono text-[11px] overflow-x-auto">
+{`// Request Body
+{
+  "roomCode": "dev-alpha-99",
+  "title": "System Architecture Review",
+  "hostId": "usr_dev_10",
+  "isWatermarkActive": true
+}`}
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">GET /api/rooms/[code]</span>
+                    <span className="text-[11px] text-slate-400">Fetch room state</span>
+                  </div>
+                  <p className="text-xs text-slate-600">Retrieves room details, active participants, code files, and chat messages in a single response.</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">POST /api/rooms/[code]/messages</span>
+                    <span className="text-[11px] text-slate-400">Persist chat message</span>
+                  </div>
+                  <p className="text-xs text-slate-600">Send standard chat messages or code snippet messages directly to the room database.</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">POST /api/rooms/[code]/files</span>
+                    <span className="text-[11px] text-slate-400">Sync collaborative code</span>
+                  </div>
+                  <p className="text-xs text-slate-600">Updates room code files across all participants, supporting TypeScript, Python, and Go.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'storage' && (
+            <div className="space-y-6">
+              <div>
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">File System</span>
+                <h1 className="text-3xl font-extrabold text-[#0f172a] mt-1 mb-3">File Storage & Deck Uploads</h1>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Upload confidential pitch decks, investor tear-sheets, and whiteboard diagrams. Files are verified, saved to disk, and indexed in the SQLite <code className="text-xs font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded">storage_files</code> catalog.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">POST /api/storage/upload</span>
+                  <span className="text-[11px] text-slate-400">Multipart upload (max 50MB)</span>
+                </div>
+                <p className="text-xs text-slate-600">Handles PDF decks, images (PNG, JPEG, WebP), and documents. Automatically parses and updates active slides in real-time.</p>
+                <div className="p-3 rounded-xl bg-[#0f172a] text-slate-200 font-mono text-[11px] overflow-x-auto">
+{`const formData = new FormData();
+formData.append('file', fileInput.files[0]);
+formData.append('roomId', 'room_abc123');
+
+const res = await fetch('/api/storage/upload', {
+  method: 'POST',
+  body: formData
+});
+const data = await res.json();
+// => { success: true, url: "/uploads/file_xyz.pdf", file: { originalName: "deck.pdf" } }`}
                 </div>
               </div>
             </div>

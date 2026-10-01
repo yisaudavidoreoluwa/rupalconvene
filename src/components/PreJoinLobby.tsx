@@ -14,8 +14,9 @@ import {
   Copy, 
   Check,
   BookOpen,
-  Layout,
-  Presentation
+  Presentation,
+  PlusCircle,
+  Hash
 } from 'lucide-react';
 import { Participant } from '@/types/meeting';
 import { useAuth } from '@/context/AuthContext';
@@ -30,6 +31,7 @@ interface PreJoinLobbyProps {
   onToggleMic: () => void;
   onToggleVideo: () => void;
   onOpenDocs?: () => void;
+  onRoomChange?: (newCode: string, newTitle?: string) => void;
 }
 
 export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
@@ -41,9 +43,12 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
   onToggleMic,
   onToggleVideo,
   onOpenDocs,
+  onRoomChange,
 }) => {
-  const { user, loginWithProvider, openAuthModal, isAuthenticated } = useAuth();
+  const { user, loginWithProvider, openAuthModal } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [inputCode, setInputCode] = useState(roomCode);
+  const [isChangingRoom, setIsChangingRoom] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -66,6 +71,44 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
     navigator.clipboard.writeText(`https://rupal.tech/convene/${roomCode}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCreateNewRoom = async () => {
+    try {
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostId: user.id,
+          hostName: user.name,
+          hostRole: user.role,
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.room) {
+        if (onRoomChange) {
+          onRoomChange(data.room.roomCode, data.room.title);
+          setInputCode(data.room.roomCode);
+        }
+      }
+    } catch {
+      // Fallback
+      const randomCode = `RUPAL-${Math.floor(100 + Math.random() * 900)}-SYNC`;
+      if (onRoomChange) {
+        onRoomChange(randomCode, 'Live Engineering Conference');
+        setInputCode(randomCode);
+      }
+    }
+  };
+
+  const handleApplyCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputCode.trim()) return;
+    const clean = inputCode.trim().toUpperCase();
+    if (onRoomChange) {
+      onRoomChange(clean);
+    }
+    setIsChangingRoom(false);
   };
 
   const activeOthers = participants.filter((p) => p.id !== currentUser.id && !p.inGreenRoom);
@@ -194,17 +237,56 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
         </div>
 
         {/* Right: Meeting Join Actions (Clean White Background with Navy Blue Accents) */}
-        <div className="w-full max-w-md space-y-5">
+        <div className="w-full max-w-md space-y-4">
           <div>
-            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full">
-              Enterprise Meeting Room
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight mt-2">
-              Ready to join?
-            </h1>
-            <p className="text-sm text-slate-600 mt-1 font-normal">
-              {meetingTitle}
-            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-2.5 py-1 rounded-full">
+                Active Conference Room
+              </span>
+              <button
+                onClick={() => setIsChangingRoom(!isChangingRoom)}
+                className="text-xs text-slate-500 hover:text-[#0f172a] font-medium"
+              >
+                {isChangingRoom ? 'Cancel' : 'Change Room'}
+              </button>
+            </div>
+
+            {isChangingRoom ? (
+              <form onSubmit={handleApplyCode} className="mt-3 space-y-2">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputCode}
+                    onChange={(e) => setInputCode(e.target.value)}
+                    placeholder="e.g. RUPAL-901-SYNC"
+                    className="flex-1 px-3 py-2 text-xs font-mono uppercase bg-white border border-slate-200 rounded-xl"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-2 bg-[#0f172a] text-white rounded-xl text-xs font-bold"
+                  >
+                    Apply
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCreateNewRoom}
+                  className="w-full py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Generate New Instant Room</span>
+                </button>
+              </form>
+            ) : (
+              <>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight mt-2">
+                  Ready to join?
+                </h1>
+                <p className="text-sm text-slate-600 mt-1 font-normal">
+                  {meetingTitle}
+                </p>
+              </>
+            )}
           </div>
 
           {/* Social OAuth Quick Login Bar */}
@@ -273,30 +355,46 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
             </div>
           </div>
 
-          {/* Attendees in the call */}
-          <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-xs space-y-1.5">
-            <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a]">
-              <Users className="w-3.5 h-3.5 text-blue-600" />
-              <span>{activeOthers.length} participants already in session</span>
+          {/* Attendees status block */}
+          {activeOthers.length > 0 ? (
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-xs space-y-1.5">
+              <div className="flex items-center space-x-2 text-xs font-bold text-[#0f172a]">
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>{activeOthers.length} participants already in session</span>
+              </div>
+              <div className="flex items-center space-x-2 overflow-x-auto py-1">
+                {activeOthers.map((p) => (
+                  <div key={p.id} className="relative group flex-shrink-0" title={`${p.name} (${p.role})`}>
+                    <img
+                      src={p.avatar}
+                      alt={p.name}
+                      className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-100"
+                    />
+                    <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
+                  </div>
+                ))}
+                <span className="text-xs text-slate-500 pl-1 font-medium truncate">
+                  {activeOthers.map((p) => p.name.split(' ')[0]).join(', ')}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2 overflow-x-auto py-1">
-              {activeOthers.map((p) => (
-                <div key={p.id} className="relative group flex-shrink-0" title={`${p.name} (${p.role})`}>
-                  <img
-                    src={p.avatar}
-                    alt={p.name}
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-slate-100"
-                  />
-                  <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-1 ring-white" />
-                </div>
-              ))}
-              <span className="text-xs text-slate-500 pl-1 font-medium truncate">
-                {activeOthers.map((p) => p.name.split(' ')[0]).join(', ')}
-              </span>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-white border border-slate-100 shadow-xs flex items-center justify-between text-xs text-slate-600">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>You are the first to join. Ready to start!</span>
+              </div>
+              <button
+                onClick={handleCopy}
+                className="text-blue-600 font-semibold hover:underline flex items-center gap-1"
+              >
+                <Copy className="w-3 h-3" />
+                <span>Copy Link</span>
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Action Buttons (Navy Blue Primary, Clean Secondary) */}
+          {/* Action Buttons */}
           <div className="space-y-2.5">
             <button
               onClick={() => onJoinMeeting('stage')}
@@ -319,7 +417,7 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
                 onClick={() => onJoinMeeting('pitch-deck')}
                 className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0f172a] font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5"
               >
-                <Presentation className="w-3.5 h-3.5 text-amber-600" />
+                <Presentation className="w-3.5 h-3.5 text-blue-600" />
                 <span>Join with Deck</span>
               </button>
             </div>

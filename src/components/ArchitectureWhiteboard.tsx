@@ -285,6 +285,25 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
           )}
         </svg>
 
+        {/* Empty Canvas Starter State */}
+        {elements.length === 0 && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none select-none text-center p-6">
+            <div className="w-14 h-14 rounded-3xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3 shadow-xs">
+              <Layers className="w-6 h-6 text-slate-500" />
+            </div>
+            <h3 className="text-base font-bold text-[#0f172a]">Interactive Architecture Canvas</h3>
+            <p className="text-xs text-slate-500 max-w-sm mt-1">
+              Drag and drop microservices, databases, and gateways. Click &ldquo;+ Add Node&rdquo; above or load a starter template.
+            </p>
+            <button
+              onClick={handleResetDefaults}
+              className="mt-4 pointer-events-auto px-4 py-2 bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
+            >
+              Load Cloud Architecture Stencil
+            </button>
+          </div>
+        )}
+
         {/* Draggable Architecture Nodes (Deep Navy Cards) */}
         {elements.map((el) => {
           const isSelected = el.id === selectedElementId;
