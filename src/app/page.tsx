@@ -145,6 +145,7 @@ function ConferenceApp() {
     isSpeaking: isLocalSpeaking,
     toggleMute: webrtcToggleMute,
     toggleVideo: webrtcToggleVideo,
+    initLocalMedia,
     broadcastSlideChange,
     broadcastLaser,
     broadcastReaction,
@@ -187,6 +188,7 @@ function ConferenceApp() {
   const allParticipants: Participant[] = [
     {
       ...currentUser,
+      stream: localStream || undefined,
       isSpeaking: isLocalSpeaking,
     },
     ...remoteParticipants,
@@ -227,10 +229,12 @@ function ConferenceApp() {
   // Audio/Video Toggles
   const handleToggleMic = () => {
     setIsMuted((prev) => !prev);
+    webrtcToggleMute();
   };
 
-  const handleToggleVideo = () => {
+  const handleToggleVideo = async () => {
     setIsVideoOff((prev) => !prev);
+    await webrtcToggleVideo();
   };
 
   const handleToggleScreenShare = async () => {
@@ -409,6 +413,7 @@ function ConferenceApp() {
             }
             if (startTab) setActiveTab(startTab);
             setInLobby(false);
+            initLocalMedia();
           }}
           onToggleMic={handleToggleMic}
           onToggleVideo={handleToggleVideo}
@@ -454,6 +459,8 @@ function ConferenceApp() {
                 onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
                 onMoveToGreenRoom={handleMoveToGreenRoom}
                 localVideoRef={localVideoRef}
+                currentUserId={currentUser.id}
+                localStream={localStream}
               />
             </div>
           )}
@@ -481,6 +488,8 @@ function ConferenceApp() {
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
                     onMoveToGreenRoom={handleMoveToGreenRoom}
                     localVideoRef={localVideoRef}
+                    currentUserId={currentUser.id}
+                    localStream={localStream}
                   />
                 </div>
               )}
@@ -507,6 +516,8 @@ function ConferenceApp() {
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
                     onMoveToGreenRoom={handleMoveToGreenRoom}
                     localVideoRef={localVideoRef}
+                    currentUserId={currentUser.id}
+                    localStream={localStream}
                   />
                 </div>
               )}
@@ -539,6 +550,8 @@ function ConferenceApp() {
                     onAdmitFromGreenRoom={handleAdmitFromGreenRoom}
                     onMoveToGreenRoom={handleMoveToGreenRoom}
                     localVideoRef={localVideoRef}
+                    currentUserId={currentUser.id}
+                    localStream={localStream}
                   />
                 </div>
               )}
@@ -553,6 +566,7 @@ function ConferenceApp() {
                 participants={allParticipants}
                 onAdmitToStage={handleAdmitFromGreenRoom}
                 onMoveToGreenRoom={handleMoveToGreenRoom}
+                currentUserId={currentUser.id}
               />
             </div>
           )}

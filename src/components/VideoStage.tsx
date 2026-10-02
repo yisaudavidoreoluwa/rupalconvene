@@ -12,6 +12,8 @@ interface VideoStageProps {
   onMoveToGreenRoom: (participantId: string) => void;
   localVideoRef?: React.RefObject<HTMLVideoElement | null>;
   compactMode?: boolean;
+  currentUserId?: string;
+  localStream?: MediaStream | null;
 }
 
 export const VideoStage: React.FC<VideoStageProps> = ({
@@ -21,8 +23,18 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   onMoveToGreenRoom,
   localVideoRef,
   compactMode = false,
+  currentUserId,
+  localStream,
 }) => {
   const [pinnedId, setPinnedId] = useState<string | null>(null);
+
+  const checkIsSelf = (participantId: string) => {
+    return (
+      participantId === currentUserId ||
+      participantId === 'user-self' ||
+      (!!currentUserId && participantId.startsWith(currentUserId))
+    );
+  };
 
   const stageParticipants = participants.filter((p) => !p.inGreenRoom);
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
@@ -71,45 +83,62 @@ export const VideoStage: React.FC<VideoStageProps> = ({
       {compactMode ? (
         /* Compact Vertical Ribbon when Code IDE or Whiteboard is open */
         <div className="w-full flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto max-h-[280px] md:max-h-full pb-2">
-          {stageParticipants.map((p) => (
-            <div key={p.id} className="min-w-[200px] md:min-w-0 md:w-full h-36 flex-shrink-0">
-              <VideoTile
-                participant={p}
-                isSelf={p.id === 'user-self'}
-                isPinned={pinnedId === p.id}
-                onPinToggle={() => setPinnedId(pinnedId === p.id ? null : p.id)}
-                localVideoRef={p.id === 'user-self' ? localVideoRef : undefined}
-              />
-            </div>
-          ))}
+          {stageParticipants.map((p) => {
+            const isSelf = checkIsSelf(p.id);
+            const stream = (isSelf && !p.stream && localStream) ? localStream : p.stream;
+            const participantWithStream = stream ? { ...p, stream } : p;
+            return (
+              <div key={p.id} className="min-w-[200px] md:min-w-0 md:w-full h-36 flex-shrink-0">
+                <VideoTile
+                  participant={participantWithStream}
+                  isSelf={isSelf}
+                  isPinned={pinnedId === p.id}
+                  onPinToggle={() => setPinnedId(pinnedId === p.id ? null : p.id)}
+                  localVideoRef={isSelf ? localVideoRef : undefined}
+                />
+              </div>
+            );
+          })}
         </div>
       ) : layout === 'speaker-focus' && primaryParticipant ? (
         /* Spotlight Mode */
         <div className="flex-1 flex flex-col gap-3 min-h-0">
           <div className="flex-1 min-h-0 relative">
-            <VideoTile
-              participant={primaryParticipant}
-              isSelf={primaryParticipant.id === 'user-self'}
-              isPinned={pinnedId === primaryParticipant.id}
-              onPinToggle={() => setPinnedId(null)}
-              localVideoRef={primaryParticipant.id === 'user-self' ? localVideoRef : undefined}
-            />
+            {(() => {
+              const isSelf = checkIsSelf(primaryParticipant.id);
+              const stream = (isSelf && !primaryParticipant.stream && localStream) ? localStream : primaryParticipant.stream;
+              const primaryWithStream = stream ? { ...primaryParticipant, stream } : primaryParticipant;
+              return (
+                <VideoTile
+                  participant={primaryWithStream}
+                  isSelf={isSelf}
+                  isPinned={pinnedId === primaryParticipant.id}
+                  onPinToggle={() => setPinnedId(null)}
+                  localVideoRef={isSelf ? localVideoRef : undefined}
+                />
+              );
+            })()}
           </div>
 
           {secondaryParticipants.length > 0 && (
             <div className="h-32 sm:h-36 flex gap-3 overflow-x-auto py-1">
-              {secondaryParticipants.map((p) => (
-                <div key={p.id} className="w-48 sm:w-56 h-full flex-shrink-0">
-                  <VideoTile
-                    participant={p}
-                    isSelf={p.id === 'user-self'}
-                    isPinned={pinnedId === p.id}
-                    onPinToggle={() => setPinnedId(p.id)}
-                    onMoveToGreenRoom={() => onMoveToGreenRoom(p.id)}
-                    localVideoRef={p.id === 'user-self' ? localVideoRef : undefined}
-                  />
-                </div>
-              ))}
+              {secondaryParticipants.map((p) => {
+                const isSelf = checkIsSelf(p.id);
+                const stream = (isSelf && !p.stream && localStream) ? localStream : p.stream;
+                const secondaryWithStream = stream ? { ...p, stream } : p;
+                return (
+                  <div key={p.id} className="w-48 sm:w-56 h-full flex-shrink-0">
+                    <VideoTile
+                      participant={secondaryWithStream}
+                      isSelf={isSelf}
+                      isPinned={pinnedId === p.id}
+                      onPinToggle={() => setPinnedId(p.id)}
+                      onMoveToGreenRoom={() => onMoveToGreenRoom(p.id)}
+                      localVideoRef={isSelf ? localVideoRef : undefined}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -126,18 +155,23 @@ export const VideoStage: React.FC<VideoStageProps> = ({
               : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
           }`}
         >
-          {stageParticipants.map((p) => (
-            <div key={p.id} className="w-full h-full min-h-[190px]">
-              <VideoTile
-                participant={p}
-                isSelf={p.id === 'user-self'}
-                isPinned={pinnedId === p.id}
-                onPinToggle={() => setPinnedId(pinnedId === p.id ? null : p.id)}
-                onMoveToGreenRoom={() => onMoveToGreenRoom(p.id)}
-                localVideoRef={p.id === 'user-self' ? localVideoRef : undefined}
-              />
-            </div>
-          ))}
+          {stageParticipants.map((p) => {
+            const isSelf = checkIsSelf(p.id);
+            const stream = (isSelf && !p.stream && localStream) ? localStream : p.stream;
+            const participantWithStream = stream ? { ...p, stream } : p;
+            return (
+              <div key={p.id} className="w-full h-full min-h-[190px]">
+                <VideoTile
+                  participant={participantWithStream}
+                  isSelf={isSelf}
+                  isPinned={pinnedId === p.id}
+                  onPinToggle={() => setPinnedId(pinnedId === p.id ? null : p.id)}
+                  onMoveToGreenRoom={() => onMoveToGreenRoom(p.id)}
+                  localVideoRef={isSelf ? localVideoRef : undefined}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

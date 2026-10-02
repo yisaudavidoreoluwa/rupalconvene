@@ -16,6 +16,7 @@ interface AgendaGreenRoomProps {
   participants: Participant[];
   onAdmitToStage: (participantId: string) => void;
   onMoveToGreenRoom: (participantId: string) => void;
+  currentUserId?: string;
 }
 
 export const AgendaGreenRoom: React.FC<AgendaGreenRoomProps> = ({
@@ -23,6 +24,7 @@ export const AgendaGreenRoom: React.FC<AgendaGreenRoomProps> = ({
   participants,
   onAdmitToStage,
   onMoveToGreenRoom,
+  currentUserId,
 }) => {
   const stageParticipants = participants.filter((p) => !p.inGreenRoom);
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
@@ -219,7 +221,7 @@ export const AgendaGreenRoom: React.FC<AgendaGreenRoomProps> = ({
                     <div className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span className="text-slate-800 font-bold truncate">{p.name}</span>
                   </div>
-                  {p.id !== 'user-self' && (
+                  {p.id !== 'user-self' && p.id !== currentUserId && (
                     <button
                       onClick={() => onMoveToGreenRoom(p.id)}
                       className="px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 hover:text-amber-700 hover:bg-slate-100 transition-colors"

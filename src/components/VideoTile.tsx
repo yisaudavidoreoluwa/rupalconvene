@@ -29,23 +29,36 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   localVideoRef,
   isPip = false,
 }) => {
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const internalVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Attach remote WebRTC media stream to video and audio elements
+  // Use localVideoRef if provided for self, otherwise use internalVideoRef
+  const activeVideoRef = (isSelf && localVideoRef) ? localVideoRef : internalVideoRef;
+
+  // Stream to display
+  const streamToDisplay = participant.stream;
+
+  // Attach media stream to video and audio elements
   useEffect(() => {
-    if (!isSelf && participant.stream) {
-      if (remoteVideoRef.current && remoteVideoRef.current.srcObject !== participant.stream) {
-        remoteVideoRef.current.srcObject = participant.stream;
+    const videoEl = activeVideoRef.current;
+    if (videoEl && streamToDisplay) {
+      if (videoEl.srcObject !== streamToDisplay) {
+        videoEl.srcObject = streamToDisplay;
       }
-      if (remoteAudioRef.current && remoteAudioRef.current.srcObject !== participant.stream) {
-        remoteAudioRef.current.srcObject = participant.stream;
+      videoEl.play().catch((e) => {
+        console.info('Video autoplay pending user interaction:', e);
+      });
+    }
+
+    if (!isSelf && streamToDisplay && remoteAudioRef.current) {
+      if (remoteAudioRef.current.srcObject !== streamToDisplay) {
+        remoteAudioRef.current.srcObject = streamToDisplay;
         remoteAudioRef.current.play().catch((e) => {
           console.info('Audio autoplay pending user interaction:', e);
         });
       }
     }
-  }, [isSelf, participant.stream]);
+  }, [isSelf, streamToDisplay, activeVideoRef]);
 
   const getRoleBadge = (role: ParticipantRole) => {
     switch (role) {
@@ -65,6 +78,8 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   const badge = getRoleBadge(participant.role);
   const cleanName = (participant.name || 'Participant').replace(/\s*\(You\)\s*$/i, '').trim();
 
+  const isVideoActive = !participant.isVideoOff && !!streamToDisplay;
+
   return (
     <div
       onDoubleClick={onPinToggle}
@@ -78,38 +93,26 @@ export const VideoTile: React.FC<VideoTileProps> = ({
     >
       {/* Video Content Layer */}
       <div className="absolute inset-0 w-full h-full bg-[#0a192f] flex items-center justify-center overflow-hidden">
-        {/* 1. Local Video Element */}
-        {isSelf && localVideoRef ? (
-          <video
-            ref={localVideoRef}
-            autoPlay
-            playsInline
-            muted
-            className={`w-full h-full object-cover transform -scale-x-100 transition-opacity duration-200 ${
-              participant.isVideoOff ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}
-          />
-        ) : null}
+        {/* Video Element (Local or Remote) */}
+        <video
+          ref={activeVideoRef}
+          autoPlay
+          playsInline
+          muted={isSelf}
+          className={`w-full h-full object-cover transition-opacity duration-200 ${
+            isSelf ? 'transform -scale-x-100' : ''
+          } ${
+            !isVideoActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+        />
 
-        {/* 2. Remote Video Element */}
-        {!isSelf && participant.stream ? (
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            className={`w-full h-full object-cover transition-opacity duration-200 ${
-              participant.isVideoOff ? 'opacity-0 pointer-events-none' : 'opacity-100'
-            }`}
-          />
-        ) : null}
-
-        {/* 3. Remote Audio Element (Plays remote participant's voice across devices) */}
-        {!isSelf && participant.stream && (
+        {/* Remote Audio Element (Plays remote participant's voice across devices) */}
+        {!isSelf && streamToDisplay && (
           <audio ref={remoteAudioRef} autoPlay playsInline />
         )}
 
-        {/* 4. Avatar Fallback (when video is disabled or waiting for stream) */}
-        {(participant.isVideoOff || (!isSelf && !participant.stream)) && (
+        {/* Avatar Fallback (when video is disabled or stream not yet loaded) */}
+        {!isVideoActive && (
           <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0f172a] via-[#0a192f] to-[#0f172a]">
             <div className="relative mb-2 sm:mb-3">
               <img

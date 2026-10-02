@@ -56,24 +56,48 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
       return null;
     }
 
-    // Reuse existing active stream if already available
-    if (localStreamRef.current && localStreamRef.current.active) {
+    // Reuse existing active stream if it has live tracks
+    if (
+      localStreamRef.current &&
+      localStreamRef.current.active &&
+      localStreamRef.current.getVideoTracks().some((t) => t.readyState === 'live')
+    ) {
       return localStreamRef.current;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user',
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
+      let stream: MediaStream;
+      try {
+        // Attempt high-quality user-facing stream first
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: 'user',
+          },
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      } catch (primaryErr) {
+        console.warn('[WebRTC] High-res camera request failed, falling back to standard constraints:', primaryErr);
+        try {
+          // Fallback to basic video + audio
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: true,
+          });
+        } catch (secondaryErr) {
+          console.warn('[WebRTC] Standard video+audio failed, trying video only:', secondaryErr);
+          // Fallback to video only (e.g. if mic is in exclusive use or unavailable)
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+      }
 
       localStreamRef.current = stream;
       setLocalStream(stream);
@@ -86,6 +110,8 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
       }
       if (currentUserRef.current.isVideoOff) {
         videoTracks.forEach((t) => (t.enabled = false));
+      } else {
+        videoTracks.forEach((t) => (t.enabled = true));
       }
 
       // Add tracks to any existing peer connections
@@ -461,6 +487,9 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
       localStreamRef.current.getVideoTracks().forEach((t) => {
         t.enabled = !currentUser.isVideoOff;
       });
+    } else if (enabled && !currentUser.isVideoOff) {
+      // Stream missing but user has camera enabled: initialize
+      initLocalMedia();
     }
 
     // Broadcast updated state to room channel
@@ -491,7 +520,7 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
         handRaised: currentUser.handRaised,
       }).catch(() => {});
     }
-  }, [currentUser.id, currentUser.name, currentUser.email, currentUser.avatar, currentUser.role, currentUser.organization, currentUser.jobTitle, currentUser.isMuted, currentUser.isVideoOff, currentUser.handRaised]);
+  }, [enabled, initLocalMedia, currentUser.id, currentUser.name, currentUser.email, currentUser.avatar, currentUser.role, currentUser.organization, currentUser.jobTitle, currentUser.isMuted, currentUser.isVideoOff, currentUser.handRaised]);
 
   // Toggle Mute / Mic
   const toggleMute = useCallback(() => {
@@ -506,16 +535,19 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
   }, []);
 
   // Toggle Camera / Video
-  const toggleVideo = useCallback(() => {
-    if (localStreamRef.current) {
+  const toggleVideo = useCallback(async () => {
+    if (localStreamRef.current && localStreamRef.current.getVideoTracks().length > 0) {
       const videoTracks = localStreamRef.current.getVideoTracks();
+      const nextState = !videoTracks[0].enabled;
       videoTracks.forEach((t) => {
-        t.enabled = !t.enabled;
+        t.enabled = nextState;
       });
-      return videoTracks.length > 0 ? !videoTracks[0].enabled : true;
+      return !nextState;
+    } else {
+      const newStream = await initLocalMedia();
+      return !newStream;
     }
-    return !currentUserRef.current.isVideoOff;
-  }, []);
+  }, [initLocalMedia]);
 
   // Broadcast Presentation Slide Change across the Room
   const broadcastSlideChange = useCallback((slideIndex: number) => {
