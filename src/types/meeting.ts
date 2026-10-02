@@ -40,10 +40,23 @@ export type StageLayout =
   | 'split-workspace' 
   | 'pip';
 
+export type CodeLanguage = 
+  | 'typescript' 
+  | 'javascript' 
+  | 'html' 
+  | 'css' 
+  | 'markdown' 
+  | 'python' 
+  | 'go' 
+  | 'rust' 
+  | 'sql' 
+  | 'json' 
+  | 'xml';
+
 export interface CodeFile {
   id: string;
   name: string;
-  language: 'typescript' | 'javascript' | 'python' | 'go' | 'rust' | 'sql' | 'json';
+  language: CodeLanguage;
   content: string;
   isEntrypoint?: boolean;
 }

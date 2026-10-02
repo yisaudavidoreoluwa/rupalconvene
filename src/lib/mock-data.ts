@@ -22,26 +22,239 @@ export const INITIAL_PARTICIPANTS: Participant[] = [
 
 export const INITIAL_FILES: CodeFile[] = [
   {
-    id: 'index-ts',
-    name: 'index.ts',
-    language: 'typescript',
+    id: 'index-html',
+    name: 'index.html',
+    language: 'html',
     isEntrypoint: true,
-    content: `// Rupal Convene In-Call Code Sandbox
-// Execute TypeScript, Python & Go collaboratively in real-time
+    content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rupal Convene Live Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="convene-card">
+    <header class="header">
+      <div class="brand">
+        <span class="dot"></span>
+        <h1>Rupal Convene</h1>
+      </div>
+      <span class="badge">Hypertext Live v3.0</span>
+    </header>
 
-export async function main() {
-  const session = {
-    platform: "Rupal Convene",
-    encryption: "DTLS-SRTP 256-bit AES",
-    timestamp: new Date().toISOString()
-  };
+    <section class="metrics-grid">
+      <div class="metric">
+        <span class="label">Media Latency</span>
+        <span class="val" id="latency">1.2ms</span>
+      </div>
+      <div class="metric">
+        <span class="label">Encryption</span>
+        <span class="val">256-Bit E2EE</span>
+      </div>
+      <div class="metric">
+        <span class="label">AI Copilot</span>
+        <span class="val">Gemini 3.5</span>
+      </div>
+    </section>
 
-  console.log("Runtime active for session:", session.platform);
-  console.log("Connected with sub-2ms audio/video latency.");
-  return session;
+    <footer class="footer">
+      <button id="pingBtn" class="btn">Ping Network Gateways</button>
+      <p id="statusMsg">Connected via WebRTC mesh node #804-SYNC</p>
+    </footer>
+  </div>
+
+  <script src="app.ts"></script>
+</body>
+</html>`,
+  },
+  {
+    id: 'styles-css',
+    name: 'styles.css',
+    language: 'css',
+    content: `/* Rupal Convene Minimalist Hypertext Design */
+:root {
+  --navy: #0f172a;
+  --navy-dark: #0a192f;
+  --accent: #2563eb;
+  --emerald: #10b981;
+  --slate: #64748b;
+  --bg: #f8fafc;
 }
 
-main();`,
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+}
+
+.convene-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand h1 {
+  font-size: 18px;
+  color: var(--navy);
+  margin: 0;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: var(--emerald);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.badge {
+  background: #eff6ff;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.metric {
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  padding: 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.metric .label {
+  display: block;
+  font-size: 10px;
+  color: var(--slate);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.metric .val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+#statusMsg {
+  font-size: 11px;
+  color: var(--slate);
+  text-align: center;
+  margin-top: 12px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.1); }
+}`,
+  },
+  {
+    id: 'app-ts',
+    name: 'app.ts',
+    language: 'typescript',
+    content: `// Rupal Convene Interactive Hypertext DOM Controller
+function initializeSession() {
+  const latencyEl = document.getElementById('latency');
+  const pingBtn = document.getElementById('pingBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  let pingCount = 0;
+
+  if (pingBtn) {
+    pingBtn.addEventListener('click', () => {
+      pingCount++;
+      const randomLatency = (Math.random() * 0.8 + 0.8).toFixed(1);
+      
+      if (latencyEl) {
+        latencyEl.textContent = \`\${randomLatency}ms\`;
+        latencyEl.style.color = '#10b981';
+      }
+
+      if (statusMsg) {
+        statusMsg.textContent = \`Ping #\${pingCount} acknowledged by edge node in \${randomLatency}ms (DTLS 256-bit).\`;
+      }
+    });
+  }
+
+  console.log('[Hypertext App] Initialized. Event listeners attached.');
+}
+
+if (typeof document !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSession);
+  } else {
+    initializeSession();
+  }
+}`,
+  },
+  {
+    id: 'document-md',
+    name: 'document.md',
+    language: 'markdown',
+    content: `# Rupal Convene Hypertext Architecture & Protocol
+
+### Executive Overview
+Rupal Convene incorporates a synchronized hypertext code runner directly inside encrypted video conference rooms.
+
+| Component | Standard | Latency | Security |
+| :--- | :--- | :--- | :--- |
+| **Video Streams** | WebRTC / VP9 | < 120ms | DTLS-SRTP 256-Bit |
+| **Code IDE** | Hypertext DOM Sandbox | < 2ms | Isolated Iframe / Worker |
+| **AI Copilot** | Google Gemini 3.5 Flash | Real-time | Enterprise Encrypted |
+
+### Key Capabilities
+- **Live HTML/CSS/JS Rendering**: Real-time interactive preview of hypertext documents.
+- **Collaborative Sync**: In-call peer broadcasts on slide and code changes.
+- **Gemini Intelligence**: 1-click explanation and optimization advice.`,
   },
   {
     id: 'benchmark-py',

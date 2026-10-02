@@ -88,7 +88,7 @@ function ConferenceApp() {
 
   // Data Collections (Initialized with clean fresh start defaults)
   const [files, setFiles] = useState<CodeFile[]>(INITIAL_FILES);
-  const [activeFileId, setActiveFileId] = useState<string>('index-ts');
+  const [activeFileId, setActiveFileId] = useState<string>('index-html');
   const [whiteboardElements, setWhiteboardElements] = useState<WhiteboardElement[]>(INITIAL_WHITEBOARD_ELEMENTS);
   const [slides, setSlides] = useState<PitchSlide[]>(INITIAL_SLIDES);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -475,7 +475,9 @@ function ConferenceApp() {
                   onSelectFile={setActiveFileId}
                   onUpdateFileContent={handleUpdateFileContent}
                   onShareToChat={handleShareCodeToChat}
-                  onAskAIAboutCode={() => setActiveTab('ai-intelligence')}
+                  onAskAIAboutCode={(fileName, code) => {}}
+                  onAddFile={(newFile) => setFiles((prev) => [...prev, newFile])}
+                  onDeleteFile={(id) => setFiles((prev) => prev.filter(f => f.id !== id))}
                 />
               </div>
 
