@@ -162,6 +162,22 @@ export interface ChatMessage {
   };
 }
 
+export interface RoomRecord {
+  id: string;
+  roomCode: string;
+  title: string;
+  description?: string;
+  hostId: string;
+  inviteCode: string;
+  isInviteOnly: boolean;
+  isRecording?: boolean;
+  isLocked?: boolean;
+  isWatermarkActive?: boolean;
+  status: string;
+  startedAt: string;
+  endedAt?: string | null;
+}
+
 export interface MeetingSession {
   roomCode: string;
   title: string;

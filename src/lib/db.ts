@@ -56,6 +56,8 @@ function initSchema(db: DatabaseSync) {
         title TEXT NOT NULL,
         description TEXT,
         host_id TEXT NOT NULL,
+        invite_code TEXT,
+        is_invite_only INTEGER DEFAULT 1,
         is_recording INTEGER DEFAULT 0,
         is_locked INTEGER DEFAULT 0,
         is_watermark_active INTEGER DEFAULT 1,
@@ -130,9 +132,31 @@ function initSchema(db: DatabaseSync) {
         created_at TEXT NOT NULL
       );
     `);
+
+    // Ensure migration for existing SQLite databases
+    try {
+      db.exec('ALTER TABLE rooms ADD COLUMN invite_code TEXT;');
+    } catch {}
+    try {
+      db.exec('ALTER TABLE rooms ADD COLUMN is_invite_only INTEGER DEFAULT 1;');
+    } catch {}
   } catch (e) {
     console.warn('SQLite initSchema warning:', e);
   }
+}
+
+export function generateInviteCode(roomCode?: string): string {
+  if (roomCode) {
+    const clean = roomCode.replace(/[^A-Z0-9]/g, '');
+    const suffix = clean.length >= 6 ? clean.slice(-6) : clean.padEnd(6, '9');
+    return `INV-${suffix}`;
+  }
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let rand = '';
+  for (let i = 0; i < 6; i++) {
+    rand += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `INV-${rand}`;
 }
 
 // -------------------------------------------------------------
@@ -315,41 +339,53 @@ export async function dbCreateRoom(room: {
   description?: string;
   hostId: string;
   isWatermarkActive?: boolean;
+  inviteCode?: string;
+  isInviteOnly?: boolean;
 }) {
   const id = room.id || 'room_' + Date.now().toString(36);
   const now = new Date().toISOString();
+  const inviteCode = room.inviteCode || generateInviteCode(room.roomCode);
+  const isInviteOnly = room.isInviteOnly !== false;
 
   const supabase = getSupabaseServerClient();
   if (supabase) {
-    const { data, error } = await supabase
-      .from('rooms')
-      .insert({
-        id,
-        room_code: room.roomCode,
-        title: room.title,
-        description: room.description || '',
-        host_id: room.hostId,
-        is_watermark_active: room.isWatermarkActive !== false,
-        status: 'active',
-        started_at: now,
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .insert({
+          id,
+          room_code: room.roomCode,
+          title: room.title,
+          description: room.description || '',
+          host_id: room.hostId,
+          is_watermark_active: room.isWatermarkActive !== false,
+          invite_code: inviteCode,
+          is_invite_only: isInviteOnly,
+          status: 'active',
+          started_at: now,
+        })
+        .select()
+        .single();
 
-    if (!error && data) {
-      return {
-        id: data.id,
-        roomCode: data.room_code,
-        title: data.title,
-        description: data.description,
-        hostId: data.host_id,
-        isRecording: Boolean(data.is_recording),
-        isLocked: Boolean(data.is_locked),
-        isWatermarkActive: Boolean(data.is_watermark_active),
-        status: data.status,
-        startedAt: data.started_at,
-        endedAt: data.ended_at,
-      };
+      if (!error && data) {
+        return {
+          id: data.id,
+          roomCode: data.room_code,
+          title: data.title,
+          description: data.description,
+          hostId: data.host_id,
+          inviteCode: data.invite_code || inviteCode,
+          isInviteOnly: data.is_invite_only !== undefined ? Boolean(data.is_invite_only) : isInviteOnly,
+          isRecording: Boolean(data.is_recording),
+          isLocked: Boolean(data.is_locked),
+          isWatermarkActive: Boolean(data.is_watermark_active),
+          status: data.status,
+          startedAt: data.started_at,
+          endedAt: data.ended_at,
+        };
+      }
+    } catch (e) {
+      console.warn('Supabase room insert warning:', e);
     }
   }
 
@@ -361,6 +397,8 @@ export async function dbCreateRoom(room: {
       title: room.title,
       description: room.description || '',
       hostId: room.hostId,
+      inviteCode,
+      isInviteOnly,
       isRecording: false,
       isLocked: false,
       isWatermarkActive: room.isWatermarkActive !== false,
@@ -370,20 +408,40 @@ export async function dbCreateRoom(room: {
     };
   }
 
-  const stmt = db.prepare(`
-    INSERT INTO rooms (
-      id, room_code, title, description, host_id, is_recording, is_locked, is_watermark_active, status, started_at
-    ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, 'active', ?)
-  `);
-  stmt.run(
-    id,
-    room.roomCode,
-    room.title,
-    room.description || '',
-    room.hostId,
-    room.isWatermarkActive === false ? 0 : 1,
-    now
-  );
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO rooms (
+        id, room_code, title, description, host_id, invite_code, is_invite_only, is_recording, is_locked, is_watermark_active, status, started_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, 'active', ?)
+    `);
+    stmt.run(
+      id,
+      room.roomCode,
+      room.title,
+      room.description || '',
+      room.hostId,
+      inviteCode,
+      isInviteOnly ? 1 : 0,
+      room.isWatermarkActive === false ? 0 : 1,
+      now
+    );
+  } catch (err) {
+    // Fallback if schema doesn't have invite_code yet
+    const fallbackStmt = db.prepare(`
+      INSERT INTO rooms (
+        id, room_code, title, description, host_id, is_recording, is_locked, is_watermark_active, status, started_at
+      ) VALUES (?, ?, ?, ?, ?, 0, 0, ?, 'active', ?)
+    `);
+    fallbackStmt.run(
+      id,
+      room.roomCode,
+      room.title,
+      room.description || '',
+      room.hostId,
+      room.isWatermarkActive === false ? 0 : 1,
+      now
+    );
+  }
   return dbGetRoomByCode(room.roomCode);
 }
 
@@ -403,6 +461,8 @@ export async function dbGetRoomByCode(code: string) {
         title: data.title,
         description: data.description,
         hostId: data.host_id,
+        inviteCode: data.invite_code || generateInviteCode(data.room_code),
+        isInviteOnly: data.is_invite_only !== undefined ? Boolean(data.is_invite_only) : true,
         isRecording: Boolean(data.is_recording),
         isLocked: Boolean(data.is_locked),
         isWatermarkActive: Boolean(data.is_watermark_active),
@@ -424,6 +484,8 @@ export async function dbGetRoomByCode(code: string) {
     title: row.title,
     description: row.description,
     hostId: row.host_id,
+    inviteCode: row.invite_code || generateInviteCode(row.room_code),
+    isInviteOnly: row.is_invite_only !== undefined ? Boolean(row.is_invite_only) : true,
     isRecording: Boolean(row.is_recording),
     isLocked: Boolean(row.is_locked),
     isWatermarkActive: Boolean(row.is_watermark_active),

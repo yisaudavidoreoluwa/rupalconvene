@@ -33,8 +33,10 @@ export async function POST(req: NextRequest) {
     const title = body.title || 'Engineering Architecture & Strategy Review';
     const hostName = body.hostName || 'Conference Host';
     const hostId = body.hostId || 'host_' + crypto.randomUUID().slice(0, 8);
-    const hostRole = body.hostRole || 'tech-lead';
+    const hostRole = body.hostRole || 'host';
     const hostAvatar = body.hostAvatar || getUserAvatar(undefined, hostName);
+    const inviteCode = body.inviteCode;
+    const isInviteOnly = body.isInviteOnly !== false;
 
     // Check if room already exists
     let room = await dbGetRoomByCode(roomCode);
@@ -45,6 +47,8 @@ export async function POST(req: NextRequest) {
         description: body.description || 'Live WebRTC conference session by Rupal Convene',
         hostId,
         isWatermarkActive: body.isWatermarkActive !== false,
+        inviteCode,
+        isInviteOnly,
       });
 
       // Add Host as initial participant

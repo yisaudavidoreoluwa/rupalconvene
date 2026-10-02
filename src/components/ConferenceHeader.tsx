@@ -20,6 +20,7 @@ import { UserProfileMenu } from '@/components/UserProfileMenu';
 interface ConferenceHeaderProps {
   title: string;
   roomCode: string;
+  inviteCode?: string;
   participants: Participant[];
   layout: StageLayout;
   onLayoutChange: (layout: StageLayout) => void;
@@ -35,6 +36,7 @@ interface ConferenceHeaderProps {
 export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   title,
   roomCode,
+  inviteCode,
   participants,
   layout,
   onLayoutChange,
@@ -67,9 +69,11 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   };
 
   const handleCopyCode = () => {
+    const cleanCode = roomCode.replace(/[^A-Z0-9]/g, '');
+    const activeInvite = inviteCode || `INV-${cleanCode.length >= 6 ? cleanCode.slice(-6) : cleanCode.padEnd(6, '9')}`;
     const meetingUrl = typeof window !== 'undefined'
-      ? `${window.location.origin}?room=${roomCode}`
-      : `https://rupalconvene.vercel.app?room=${roomCode}`;
+      ? `${window.location.origin}?room=${roomCode}&invite=${activeInvite}`
+      : `https://rupalconvene.vercel.app?room=${roomCode}&invite=${activeInvite}`;
     navigator.clipboard.writeText(meetingUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

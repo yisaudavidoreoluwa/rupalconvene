@@ -18,6 +18,15 @@ export async function GET(
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
+    const inviteQuery = (req.nextUrl.searchParams.get('invite')?.trim() || '').toUpperCase();
+    const roomInviteCode = (room.inviteCode || '').toUpperCase();
+    const isInviteOnly = room.isInviteOnly !== false;
+    const isInviteValid = !isInviteOnly || (
+      inviteQuery.length > 0 && 
+      roomInviteCode.length > 0 && 
+      inviteQuery === roomInviteCode
+    );
+
     const participants = await dbGetParticipants(room.id);
     const messages = await dbGetMessages(room.id);
     const codeFiles = await dbGetCodeFiles(room.id);
@@ -27,6 +36,9 @@ export async function GET(
     return NextResponse.json({
       success: true,
       room,
+      isInviteOnly,
+      isInviteValid,
+      inviteCode: room.inviteCode,
       host: hostParticipant ? {
         id: hostParticipant.userId,
         name: hostParticipant.name,

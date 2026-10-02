@@ -7,20 +7,26 @@ interface InviteModalProps {
   isOpen: boolean;
   onClose: () => void;
   roomCode: string;
+  inviteCode?: string;
 }
 
-export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomCode }) => {
+export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomCode, inviteCode }) => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<'developer' | 'investor' | 'business-partner'>('developer');
   const [invitedList, setInvitedList] = useState<string[]>([]);
 
   if (!isOpen) return null;
 
+  // Resolved invite passcode
+  const cleanCode = roomCode.replace(/[^A-Z0-9]/g, '');
+  const activeInviteCode = inviteCode || `INV-${cleanCode.length >= 6 ? cleanCode.slice(-6) : cleanCode.padEnd(6, '9')}`;
+
   const meetingUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}?room=${roomCode}`
-    : `https://rupalconvene.vercel.app?room=${roomCode}`;
+    ? `${window.location.origin}?room=${roomCode}&invite=${activeInviteCode}`
+    : `https://rupalconvene.vercel.app?room=${roomCode}&invite=${activeInviteCode}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(meetingUrl);
@@ -32,6 +38,12 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
     navigator.clipboard.writeText(roomCode);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleCopyInvite = () => {
+    navigator.clipboard.writeText(activeInviteCode);
+    setCopiedInvite(true);
+    setTimeout(() => setCopiedInvite(false), 2000);
   };
 
   const handleSendInvite = (e: React.FormEvent) => {
@@ -55,7 +67,7 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
                 Invite Partners & Engineers
               </h3>
               <p className="text-xs text-slate-500">
-                Grant role-based access with NDA and runtime privileges
+                Conference is strictly invite-only. Share credentials or send direct pass.
               </p>
             </div>
           </div>
@@ -69,12 +81,17 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-5 text-xs sm:text-sm">
-          {/* Direct Meeting Link */}
+        <div className="p-6 space-y-4 text-xs sm:text-sm max-h-[80vh] overflow-y-auto">
+          {/* Direct Meeting Link (Includes ?invite=...) */}
           <div>
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-1.5">
-              Secure Conference URL
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block">
+                Direct Invite Link (Auto-Authorized)
+              </label>
+              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                Pre-Verified
+              </span>
+            </div>
             <div className="flex items-center space-x-2">
               <input
                 type="text"
@@ -84,30 +101,60 @@ export const InviteModal: React.FC<InviteModalProps> = ({ isOpen, onClose, roomC
               />
               <button
                 onClick={handleCopyLink}
-                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-semibold transition-colors shadow-xs"
+                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-semibold transition-colors shadow-xs active:scale-95"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{copiedLink ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Recipients clicking this link are automatically verified to join without typing the passcode.
+            </p>
           </div>
 
-          {/* Quick Room Code */}
-          <div>
-            <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider block mb-1.5">
-              Room Access Code
-            </label>
-            <div className="flex items-center space-x-2">
-              <div className="flex-1 bg-slate-50 border border-slate-200/80 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-blue-700 tracking-wider">
-                {roomCode}
+          {/* Room Code & Invite Passcode Side-by-Side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Quick Room Code */}
+            <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-2xl">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                Room Access Code
+              </label>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-bold text-xs text-blue-700 tracking-wider truncate">
+                  {roomCode}
+                </span>
+                <button
+                  onClick={handleCopyCode}
+                  className="p-1.5 rounded-lg bg-white hover:bg-slate-200 text-slate-700 transition-colors shadow-2xs"
+                  title="Copy room code"
+                >
+                  {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
               </div>
-              <button
-                onClick={handleCopyCode}
-                className="flex items-center space-x-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0f172a] text-xs font-semibold transition-colors"
-              >
-                {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
-              </button>
+            </div>
+
+            {/* Invite Passcode */}
+            <div className="p-3 bg-blue-50/60 border border-blue-200/80 rounded-2xl">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-blue-800 uppercase tracking-wider block">
+                  Invite Passcode
+                </label>
+                <span className="text-[9px] font-extrabold text-blue-600 uppercase bg-blue-100/80 px-1.5 py-0.5 rounded">
+                  Required
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="font-mono font-extrabold text-xs text-[#0f172a] tracking-wider truncate">
+                  {activeInviteCode}
+                </span>
+                <button
+                  onClick={handleCopyInvite}
+                  className="p-1.5 rounded-lg bg-white hover:bg-blue-100 text-blue-700 transition-colors shadow-2xs"
+                  title="Copy invite passcode"
+                >
+                  {copiedInvite ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
             </div>
           </div>
 

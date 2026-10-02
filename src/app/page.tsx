@@ -69,6 +69,8 @@ function ConferenceApp() {
 
   // Conference Suite State
   const [roomCode, setRoomCode] = useState('RUPAL-804-SYNC');
+  const [inviteCode, setInviteCode] = useState<string>('');
+  const [isHostUser, setIsHostUser] = useState<boolean>(false);
   const [meetingTitle, setMeetingTitle] = useState('Engineering Architecture & Strategic Review');
   const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('stage');
   const [layout, setLayout] = useState<StageLayout>('gallery');
@@ -112,13 +114,17 @@ function ConferenceApp() {
   // Local media video reference for HTML5 <video> tag
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Auto-detect room code from URL query parameter (e.g. ?room=RUPAL-804-SYNC)
+  // Auto-detect room code and invite passcode from URL query parameters (e.g. ?room=RUPAL-804-SYNC&invite=INV-04SYNC)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlRoom = params.get('room');
+      const urlInvite = params.get('invite');
       if (urlRoom && urlRoom.trim()) {
         setRoomCode(urlRoom.trim().toUpperCase());
+      }
+      if (urlInvite && urlInvite.trim()) {
+        setInviteCode(urlInvite.trim().toUpperCase());
       }
     }
   }, []);
@@ -126,12 +132,12 @@ function ConferenceApp() {
   // Build current participant profile (Clean name without duplicate (You))
   const currentUser: Participant = {
     id: user?.id || 'user-self',
-    name: user?.name || 'Conference Host',
+    name: user?.name || (isHostUser ? 'Conference Host' : 'Meeting Attendee'),
     email: user?.email || '',
-    role: user?.role || 'tech-lead',
-    avatar: getUserAvatar(user?.avatar, user?.name || 'You'),
+    role: (isHostUser ? 'host' : (user?.role || 'developer')) as Participant['role'],
+    avatar: getUserAvatar(user?.avatar, user?.name || (isHostUser ? 'Host' : 'Guest')),
     organization: user?.organization || 'Rupal Tech Solutions',
-    jobTitle: user?.jobTitle || 'Platform Engineer',
+    jobTitle: user?.jobTitle || (isHostUser ? 'Meeting Host' : 'Platform Engineer'),
     isMuted,
     isVideoOff,
     isScreenSharing,
@@ -308,13 +314,22 @@ function ConferenceApp() {
             roomCode,
             title: meetingTitle,
             hostId: user?.id || 'host_default',
-            hostName: user?.name || 'Conference Host',
-            hostRole: user?.role || 'developer',
+            hostName: user?.name || (isHostUser ? 'Conference Host' : 'Meeting Attendee'),
+            hostRole: isHostUser ? 'host' : (user?.role || 'developer'),
             hostAvatar: user?.avatar || '',
+            inviteCode: inviteCode || undefined,
+            isInviteOnly: true,
           })
         });
         const data = await res.json();
         if (data.success && data.room) {
+          if (data.room.inviteCode && !inviteCode) {
+            setInviteCode(data.room.inviteCode);
+          }
+          if (user?.id && data.room.hostId === user.id) {
+            setIsHostUser(true);
+          }
+
           // Fetch existing messages if any
           const msgRes = await fetch(`/api/rooms/${roomCode}/messages`);
           const msgData = await msgRes.json();
@@ -327,7 +342,7 @@ function ConferenceApp() {
       }
     }
     initRoom();
-  }, [roomCode, meetingTitle, user?.id, user?.name, user?.role, user?.avatar]);
+  }, [roomCode, meetingTitle, user?.id, user?.name, user?.role, user?.avatar, isHostUser, inviteCode]);
 
   // Audio/Video Toggles
   const handleToggleMic = () => {
@@ -493,11 +508,29 @@ function ConferenceApp() {
     setIsChatOpen(true);
   };
 
-  const handleRoomChange = (newCode: string, newTitle?: string) => {
+  const handleRoomChange = (newCode: string, newTitle?: string, newInvite?: string) => {
     setRoomCode(newCode);
     if (newTitle) {
       setMeetingTitle(newTitle);
     }
+    if (newInvite) {
+      setInviteCode(newInvite);
+    }
+  };
+
+  const handleHostMeeting = (
+    newRoomCode: string,
+    newTitle: string,
+    newInviteCode: string,
+    startTab?: ActiveWorkspaceTab
+  ) => {
+    setRoomCode(newRoomCode);
+    setMeetingTitle(newTitle);
+    setInviteCode(newInviteCode);
+    setIsHostUser(true);
+    if (startTab) setActiveTab(startTab);
+    setInLobby(false);
+    initLocalMedia();
   };
 
   // If in Pre-Join Lobby screen or unauthenticated
@@ -507,6 +540,8 @@ function ConferenceApp() {
         <PreJoinLobby
           roomCode={roomCode}
           meetingTitle={meetingTitle}
+          inviteCode={inviteCode}
+          isHost={isHostUser}
           participants={allParticipants}
           currentUser={{
             ...currentUser,
@@ -523,6 +558,7 @@ function ConferenceApp() {
             setInLobby(false);
             initLocalMedia();
           }}
+          onHostMeeting={handleHostMeeting}
           onToggleMic={handleToggleMic}
           onToggleVideo={handleToggleVideo}
           onOpenDocs={() => setIsDocsOpen(true)}
@@ -543,6 +579,7 @@ function ConferenceApp() {
       <ConferenceHeader
         title={meetingTitle}
         roomCode={roomCode}
+        inviteCode={inviteCode}
         participants={allParticipants}
         layout={layout}
         onLayoutChange={setLayout}
@@ -831,6 +868,7 @@ function ConferenceApp() {
         isOpen={isInviteOpen}
         onClose={() => setIsInviteOpen(false)}
         roomCode={roomCode}
+        inviteCode={inviteCode}
       />
 
       <LeaveModal
