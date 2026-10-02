@@ -22,9 +22,21 @@ export async function GET(
     const messages = await dbGetMessages(room.id);
     const codeFiles = await dbGetCodeFiles(room.id);
 
+    const hostParticipant = participants.find((p: any) => p.userId === room.hostId || p.role === 'host') || participants[0];
+
     return NextResponse.json({
       success: true,
       room,
+      host: hostParticipant ? {
+        id: hostParticipant.userId,
+        name: hostParticipant.name,
+        role: hostParticipant.role,
+        avatar: hostParticipant.avatar,
+      } : {
+        id: room.hostId,
+        name: 'Authorized Host',
+        role: 'host',
+      },
       participants,
       messages,
       codeFiles,

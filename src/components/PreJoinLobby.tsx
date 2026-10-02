@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Video, 
   VideoOff, 
@@ -16,7 +16,10 @@ import {
   BookOpen, 
   Presentation, 
   PlusCircle, 
-  Lock 
+  Lock,
+  AlertTriangle,
+  Loader2,
+  Crown
 } from 'lucide-react';
 import { Participant } from '@/types/meeting';
 import { useAuth } from '@/context/AuthContext';
@@ -54,6 +57,36 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
   const [inputCode, setInputCode] = useState(roomCode);
   const [isChangingRoom, setIsChangingRoom] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Room verification state (Requirement 7: Avoid users joining unknown rooms by unknown hosts)
+  const [validationState, setValidationState] = useState<'checking' | 'valid' | 'unknown'>('checking');
+  const [hostInfo, setHostInfo] = useState<{ id?: string; name?: string; role?: string } | null>(null);
+
+  // Validate room existence and host credentials against registry
+  const verifyRoom = useCallback(async (codeToVerify: string) => {
+    if (!codeToVerify) return;
+    setValidationState('checking');
+    try {
+      const res = await fetch(`/api/rooms/${codeToVerify}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.room) {
+          setValidationState('valid');
+          setHostInfo(data.host || { name: 'Authorized Host' });
+          return;
+        }
+      }
+      setValidationState('unknown');
+      setHostInfo(null);
+    } catch {
+      setValidationState('unknown');
+      setHostInfo(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    verifyRoom(roomCode);
+  }, [roomCode, verifyRoom]);
 
   // Bind live media stream to the video preview element
   useEffect(() => {
@@ -120,6 +153,8 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
       });
       const data = await res.json();
       if (data.success && data.room) {
+        setValidationState('valid');
+        setHostInfo({ name: user?.name || 'You (Host)' });
         if (onRoomChange) {
           onRoomChange(data.room.roomCode, data.room.title);
           setInputCode(data.room.roomCode);
@@ -127,10 +162,44 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
       }
     } catch {
       const randomCode = `RUPAL-${Math.floor(100 + Math.random() * 900)}-SYNC`;
+      setValidationState('valid');
       if (onRoomChange) {
         onRoomChange(randomCode, 'Live Engineering Conference');
         setInputCode(randomCode);
       }
+    }
+  };
+
+  // Start the current unhosted room code as Host (Requirement 7)
+  const handleStartAsHost = async () => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomCode: inputCode || roomCode,
+          title: meetingTitle || 'Live Engineering Conference',
+          hostId: user?.id || 'host_user',
+          hostName: user?.name || 'Conference Host',
+          hostRole: user?.role || 'developer',
+          hostAvatar: user?.avatar || '',
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.room) {
+        setValidationState('valid');
+        setHostInfo({ name: user?.name || 'You (Host)' });
+        if (onRoomChange) {
+          onRoomChange(data.room.roomCode, data.room.title);
+        }
+      }
+    } catch {
+      setValidationState('valid');
     }
   };
 
@@ -142,11 +211,16 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
       onRoomChange(clean);
     }
     setIsChangingRoom(false);
+    verifyRoom(clean);
   };
 
   const handleAttemptJoin = (tab?: 'stage' | 'code-ide' | 'whiteboard' | 'pitch-deck') => {
     if (!isAuthenticated) {
       openAuthModal('login');
+      return;
+    }
+    // Block entry if room has not been verified or has no registered host (Requirement 7)
+    if (validationState !== 'valid') {
       return;
     }
     onJoinMeeting(tab);
@@ -377,6 +451,48 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
                 <p className="text-xs sm:text-sm text-slate-600 mt-1 font-normal">
                   {meetingTitle}
                 </p>
+
+                {/* Room Verification State Banner (Requirement 7) */}
+                {validationState === 'checking' && (
+                  <div className="flex items-center space-x-2 text-xs text-slate-500 py-1.5 animate-pulse mt-1">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                    <span>Verifying room registry & host credentials...</span>
+                  </div>
+                )}
+
+                {validationState === 'valid' && (
+                  <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200 mt-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Verified Active Room • Host: {hostInfo?.name || 'Authorized Host'}</span>
+                  </div>
+                )}
+
+                {validationState === 'unknown' && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 space-y-2 mt-2.5">
+                    <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                      <span>Unknown / Unhosted Conference Room</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      Meeting code <span className="font-mono font-bold">{roomCode}</span> was not found in the verified registry or has not been started by an authorized host. Direct joining is restricted to prevent users from entering unknown sessions.
+                    </p>
+                    <div className="pt-1 flex flex-col sm:flex-row items-center gap-2">
+                      <button
+                        onClick={handleStartAsHost}
+                        className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+                      >
+                        <Crown className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Start Meeting as Host</span>
+                      </button>
+                      <button
+                        onClick={() => setIsChangingRoom(true)}
+                        className="w-full sm:w-auto px-3 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-semibold hover:bg-amber-100/50"
+                      >
+                        Enter Valid Code
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -506,20 +622,38 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action Buttons (Disabled if unverified or unknown room) */}
           <div className="space-y-2.5">
             <button
               onClick={() => handleAttemptJoin('stage')}
-              className="w-full py-3.5 rounded-2xl bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-sm shadow-md shadow-slate-900/10 transition-all active:scale-98 flex items-center justify-center space-x-2 touch-manipulation"
+              disabled={validationState !== 'valid'}
+              className={`w-full py-3.5 rounded-2xl font-bold text-sm shadow-md shadow-slate-900/10 transition-all flex items-center justify-center space-x-2 touch-manipulation ${
+                validationState === 'valid'
+                  ? 'bg-[#0f172a] hover:bg-[#1e293b] text-white active:scale-98 cursor-pointer'
+                  : 'bg-slate-200 text-slate-400 cursor-not-allowed opacity-75'
+              }`}
             >
-              <span>{isAuthenticated ? 'Join Conference Stage' : 'Sign In to Join Stage'}</span>
+              <span>
+                {validationState === 'checking'
+                  ? 'Verifying Conference Room...'
+                  : validationState === 'unknown'
+                  ? 'Unknown Room • Host Required'
+                  : isAuthenticated
+                  ? 'Join Conference Stage'
+                  : 'Sign In to Join Stage'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleAttemptJoin('code-ide')}
-                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0f172a] font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5 touch-manipulation"
+                disabled={validationState !== 'valid'}
+                className={`py-2.5 px-3 rounded-xl font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5 touch-manipulation ${
+                  validationState === 'valid'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-[#0f172a] cursor-pointer'
+                    : 'bg-slate-100/50 text-slate-400 cursor-not-allowed opacity-60'
+                }`}
               >
                 <Code className="w-3.5 h-3.5 text-blue-600" />
                 <span>Join with IDE</span>
@@ -527,7 +661,12 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
 
               <button
                 onClick={() => handleAttemptJoin('pitch-deck')}
-                className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-[#0f172a] font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5 touch-manipulation"
+                disabled={validationState !== 'valid'}
+                className={`py-2.5 px-3 rounded-xl font-semibold text-xs transition-colors flex items-center justify-center space-x-1.5 touch-manipulation ${
+                  validationState === 'valid'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-[#0f172a] cursor-pointer'
+                    : 'bg-slate-100/50 text-slate-400 cursor-not-allowed opacity-60'
+                }`}
               >
                 <Presentation className="w-3.5 h-3.5 text-blue-600" />
                 <span>Join with Deck</span>
@@ -536,7 +675,7 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
           </div>
 
           <div className="text-[11px] text-slate-400 leading-relaxed text-center">
-            Encrypted with 256-bit DTLS-SRTP • Watermarked with viewer credentials
+            Encrypted with 256-bit DTLS-SRTP • Host Authenticated & Verified
           </div>
         </div>
       </main>

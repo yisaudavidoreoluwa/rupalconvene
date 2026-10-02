@@ -174,3 +174,19 @@ export interface MeetingSession {
   activeTab: ActiveWorkspaceTab;
   activeLayout: StageLayout;
 }
+
+export interface RoomPermissions {
+  codeEditMode: 'host-only' | 'everyone' | 'selected';
+  allowedEditorIds: string[];
+  handsOnDeck: boolean;
+  allowedPresenterIds: string[];
+}
+
+export interface AccessRequest {
+  id: string;
+  type: 'code-edit' | 'hands-on-deck';
+  userId: string;
+  userName: string;
+  timestamp: string;
+}
+

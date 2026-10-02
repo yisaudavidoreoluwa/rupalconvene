@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Participant } from '@/types/meeting';
+import { Participant, ChatMessage, RoomPermissions, AccessRequest, PitchSlide } from '@/types/meeting';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -21,9 +21,27 @@ interface UseWebRTCOptions {
   roomCode: string;
   currentUser: Participant;
   enabled?: boolean;
+  onRemoteCodeEdit?: (fileId: string, content: string, senderName: string) => void;
+  onRemoteChatMessage?: (msg: ChatMessage) => void;
+  onRemoteUpvote?: (messageId: string) => void;
+  onRemotePermissions?: (permissions: RoomPermissions) => void;
+  onRemoteAccessRequest?: (req: AccessRequest) => void;
+  onRemoteAccessResponse?: (payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck'; granted: boolean }) => void;
+  onRemoteSlidesUpdate?: (slides: PitchSlide[]) => void;
 }
 
-export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOptions) {
+export function useWebRTC({ 
+  roomCode, 
+  currentUser, 
+  enabled = true,
+  onRemoteCodeEdit,
+  onRemoteChatMessage,
+  onRemoteUpvote,
+  onRemotePermissions,
+  onRemoteAccessRequest,
+  onRemoteAccessResponse,
+  onRemoteSlidesUpdate,
+}: UseWebRTCOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
   const [remoteParticipants, setRemoteParticipants] = useState<Participant[]>([]);
@@ -43,6 +61,28 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const lastSpeakingStateRef = useRef<boolean>(false);
+
+  const callbacksRef = useRef({
+    onRemoteCodeEdit,
+    onRemoteChatMessage,
+    onRemoteUpvote,
+    onRemotePermissions,
+    onRemoteAccessRequest,
+    onRemoteAccessResponse,
+    onRemoteSlidesUpdate,
+  });
+
+  useEffect(() => {
+    callbacksRef.current = {
+      onRemoteCodeEdit,
+      onRemoteChatMessage,
+      onRemoteUpvote,
+      onRemotePermissions,
+      onRemoteAccessRequest,
+      onRemoteAccessResponse,
+      onRemoteSlidesUpdate,
+    };
+  });
 
   // Keep a stable ref to currentUser to avoid re-subscribing on every state update
   const currentUserRef = useRef<Participant>(currentUser);
@@ -437,6 +477,55 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
             setReactions((prev) => prev.filter((r) => r.id !== reaction.id));
           }, 3500);
         })
+        // Live collaborative code editing broadcast
+        .on('broadcast', { event: 'code-edit' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload?.senderId !== currentUserRef.current.id && payload?.fileId && payload?.content !== undefined) {
+            callbacksRef.current.onRemoteCodeEdit?.(payload.fileId, payload.content, payload.senderName || 'Participant');
+          }
+        })
+        // Instant live chat messages
+        .on('broadcast', { event: 'chat-message' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload && payload.senderId !== currentUserRef.current.id) {
+            callbacksRef.current.onRemoteChatMessage?.(payload);
+          }
+        })
+        // Live Q&A upvotes
+        .on('broadcast', { event: 'qa-upvote' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload?.messageId) {
+            callbacksRef.current.onRemoteUpvote?.(payload.messageId);
+          }
+        })
+        // Room permissions (Host-controlled code edit & hands-on-deck)
+        .on('broadcast', { event: 'room-permissions' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload) {
+            callbacksRef.current.onRemotePermissions?.(payload);
+          }
+        })
+        // Access request (Request edit access / Request hands on deck)
+        .on('broadcast', { event: 'access-request' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload && payload.userId !== currentUserRef.current.id) {
+            callbacksRef.current.onRemoteAccessRequest?.(payload);
+          }
+        })
+        // Access response (Host grants/declines request)
+        .on('broadcast', { event: 'access-response' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload) {
+            callbacksRef.current.onRemoteAccessResponse?.(payload);
+          }
+        })
+        // Live presentation slides update (e.g. multi-page PDF upload)
+        .on('broadcast', { event: 'presentation-slides-update' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload?.slides && Array.isArray(payload.slides)) {
+            callbacksRef.current.onRemoteSlidesUpdate?.(payload.slides);
+          }
+        })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
@@ -593,6 +682,97 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
     }
   }, []);
 
+  // Broadcast Live Collaborative Code Edit
+  const broadcastCodeEdit = useCallback((fileId: string, content: string) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'code-edit',
+        payload: {
+          fileId,
+          content,
+          senderId: currentUserRef.current.id,
+          senderName: currentUserRef.current.name,
+          timestamp: Date.now(),
+        },
+      });
+    }
+  }, []);
+
+  // Broadcast Instant Live Chat Message
+  const broadcastChatMessage = useCallback((msg: ChatMessage) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'chat-message',
+        payload: msg,
+      });
+    }
+  }, []);
+
+  // Broadcast Live Q&A Upvote
+  const broadcastUpvote = useCallback((messageId: string) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'qa-upvote',
+        payload: { messageId, senderId: currentUserRef.current.id },
+      });
+    }
+  }, []);
+
+  // Broadcast Meeting Permissions (Code Edit mode & Hands on Deck)
+  const broadcastPermissions = useCallback((permissions: RoomPermissions) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'room-permissions',
+        payload: permissions,
+      });
+    }
+  }, []);
+
+  // Broadcast Access Request from Attendee to Host
+  const broadcastAccessRequest = useCallback((type: 'code-edit' | 'hands-on-deck') => {
+    const req: AccessRequest = {
+      id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      type,
+      userId: currentUserRef.current.id,
+      userName: currentUserRef.current.name,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'access-request',
+        payload: req,
+      });
+    }
+    return req;
+  }, []);
+
+  // Broadcast Host Response to Access Request
+  const broadcastAccessResponse = useCallback((requestId: string, targetUserId: string, type: 'code-edit' | 'hands-on-deck', granted: boolean) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'access-response',
+        payload: { requestId, targetUserId, type, granted },
+      });
+    }
+  }, []);
+
+  // Broadcast Bulk/Multi-page Uploaded Slides across the Room
+  const broadcastSlidesUpdate = useCallback((slides: PitchSlide[]) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'presentation-slides-update',
+        payload: { slides, senderId: currentUserRef.current.id },
+      });
+    }
+  }, []);
+
   return {
     localStream,
     remoteStreams,
@@ -606,6 +786,13 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
     broadcastSlideChange,
     broadcastLaser,
     broadcastReaction,
+    broadcastCodeEdit,
+    broadcastChatMessage,
+    broadcastUpvote,
+    broadcastPermissions,
+    broadcastAccessRequest,
+    broadcastAccessResponse,
+    broadcastSlidesUpdate,
     syncedSlideIndex,
     laserPointer,
     reactions,

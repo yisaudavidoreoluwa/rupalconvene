@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { PreJoinLobby } from '@/components/PreJoinLobby';
 import { ConferenceHeader } from '@/components/ConferenceHeader';
 import { VideoStage } from '@/components/VideoStage';
@@ -30,7 +31,9 @@ import {
   AgendaItem, 
   ChatMessage, 
   MeetingMinutes, 
-  LiveCaption 
+  LiveCaption,
+  RoomPermissions,
+  AccessRequest
 } from '@/types/meeting';
 
 import { 
@@ -137,6 +140,87 @@ function ConferenceApp() {
     inGreenRoom: false,
   };
 
+  // Permissions & Access Requests State (Requirement 2 & 6)
+  const [roomPermissions, setRoomPermissions] = useState<RoomPermissions>({
+    codeEditMode: 'host-only',
+    allowedEditorIds: [],
+    handsOnDeck: false,
+    allowedPresenterIds: [],
+  });
+  const [incomingAccessRequest, setIncomingAccessRequest] = useState<AccessRequest | null>(null);
+  const [remoteEditorStatus, setRemoteEditorStatus] = useState<{ name: string; fileId: string } | null>(null);
+  const remoteEditorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Determine host and permissions
+  const isHost = user?.role === 'host' || currentUser.role === 'host';
+  const canEditCode = isHost || roomPermissions.codeEditMode === 'everyone' || (roomPermissions.codeEditMode === 'selected' && roomPermissions.allowedEditorIds.includes(currentUser.id));
+  const canControlDeck = isHost || roomPermissions.handsOnDeck || roomPermissions.allowedPresenterIds.includes(currentUser.id);
+
+  // Remote Real-time Callbacks
+  const handleRemoteCodeEdit = useCallback((fileId: string, content: string, senderName: string) => {
+    setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, content } : f)));
+    setRemoteEditorStatus({ name: senderName, fileId });
+    if (remoteEditorTimeoutRef.current) clearTimeout(remoteEditorTimeoutRef.current);
+    remoteEditorTimeoutRef.current = setTimeout(() => {
+      setRemoteEditorStatus(null);
+    }, 2500);
+  }, []);
+
+  const handleRemoteChatMessage = useCallback((msg: ChatMessage) => {
+    setChatMessages((prev) => {
+      if (prev.some((m) => m.id === msg.id)) return prev;
+      return [...prev, msg];
+    });
+    if (msg.type === 'chat') {
+      setCaptions((prev) => [
+        ...prev,
+        {
+          id: `cap-${msg.id || Date.now()}`,
+          speakerId: msg.senderId,
+          speakerName: msg.senderName,
+          speakerRole: msg.senderRole,
+          text: msg.text,
+          timestamp: msg.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  }, []);
+
+  const handleRemoteUpvote = useCallback((messageId: string) => {
+    setChatMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, upvotes: (m.upvotes || 0) + 1 } : m))
+    );
+  }, []);
+
+  const handleRemotePermissions = useCallback((permissions: RoomPermissions) => {
+    setRoomPermissions(permissions);
+  }, []);
+
+  const handleRemoteAccessRequest = useCallback((req: AccessRequest) => {
+    setIncomingAccessRequest(req);
+  }, []);
+
+  const handleRemoteAccessResponse = useCallback((payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck'; granted: boolean }) => {
+    if (payload.targetUserId === currentUser.id) {
+      const typeLabel = payload.type === 'code-edit' ? 'Code Editor' : 'Hands on Deck';
+      setCaptions((prev) => [
+        ...prev,
+        {
+          id: `notif-${Date.now()}`,
+          speakerId: 'system',
+          speakerName: 'Host Permissions',
+          speakerRole: 'host',
+          text: `Host has ${payload.granted ? 'granted' : 'declined'} your request for ${typeLabel} access.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  }, [currentUser.id]);
+
+  const handleRemoteSlidesUpdate = useCallback((newSlides: PitchSlide[]) => {
+    setSlides(newSlides);
+  }, []);
+
   // Real-time WebRTC Mesh & Supabase Realtime Signaling Hook
   const {
     localStream,
@@ -149,6 +233,13 @@ function ConferenceApp() {
     broadcastSlideChange,
     broadcastLaser,
     broadcastReaction,
+    broadcastCodeEdit,
+    broadcastChatMessage,
+    broadcastUpvote,
+    broadcastPermissions,
+    broadcastAccessRequest,
+    broadcastAccessResponse,
+    broadcastSlidesUpdate,
     syncedSlideIndex,
     laserPointer,
     reactions,
@@ -159,6 +250,13 @@ function ConferenceApp() {
       isSpeaking: false,
     },
     enabled: isAuthenticated,
+    onRemoteCodeEdit: handleRemoteCodeEdit,
+    onRemoteChatMessage: handleRemoteChatMessage,
+    onRemoteUpvote: handleRemoteUpvote,
+    onRemotePermissions: handleRemotePermissions,
+    onRemoteAccessRequest: handleRemoteAccessRequest,
+    onRemoteAccessResponse: handleRemoteAccessResponse,
+    onRemoteSlidesUpdate: handleRemoteSlidesUpdate,
   });
 
   // Synchronize slide changes across all devices in the room
@@ -173,6 +271,11 @@ function ConferenceApp() {
   const handleSlideChange = (newIndex: number) => {
     setCurrentSlideIndex(newIndex);
     broadcastSlideChange(newIndex);
+  };
+
+  const handleUploadSlides = (newSlides: PitchSlide[]) => {
+    setSlides(newSlides);
+    broadcastSlidesUpdate(newSlides);
   };
 
   // Attach local media stream to localVideoRef element
@@ -291,7 +394,7 @@ function ConferenceApp() {
     console.info('Moved participant to green room:', participantId);
   };
 
-  // Chat message handling with backend persistence
+  // Chat message handling with real-time broadcast and backend persistence
   const handleSendMessage = async (text: string, type: ChatMessage['type']) => {
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -305,6 +408,9 @@ function ConferenceApp() {
       upvotes: type === 'qa' ? 1 : undefined,
     };
     setChatMessages((prev) => [...prev, newMsg]);
+
+    // Broadcast instant real-time message to all meeting participants (Requirement 4)
+    broadcastChatMessage(newMsg);
 
     setCaptions((prev) => [
       ...prev,
@@ -341,6 +447,7 @@ function ConferenceApp() {
         m.id === messageId ? { ...m, upvotes: (m.upvotes || 0) + 1 } : m
       )
     );
+    broadcastUpvote(messageId);
   };
 
   // Code actions with backend persistence
@@ -382,6 +489,7 @@ function ConferenceApp() {
       },
     };
     setChatMessages((prev) => [...prev, newMsg]);
+    broadcastChatMessage(newMsg);
     setIsChatOpen(true);
   };
 
@@ -447,6 +555,56 @@ function ConferenceApp() {
         onBackToPortal={() => setInLobby(true)}
       />
 
+      {/* Host Access Request Banner (Requirement 2 & 6) */}
+      {incomingAccessRequest && isHost && (
+        <div className="fixed top-16 right-4 z-50 bg-[#0f172a] text-white p-4 rounded-2xl shadow-2xl border border-blue-500/40 max-w-sm w-full animate-in slide-in-from-top-4 duration-200">
+          <div className="flex items-center space-x-2 font-bold text-xs text-blue-400 mb-1">
+            <ShieldCheck className="w-4 h-4 text-blue-400" />
+            <span>Attendee Permission Request</span>
+          </div>
+          <p className="text-xs text-slate-200 leading-relaxed">
+            <span className="font-bold text-white">{incomingAccessRequest.userName}</span> requested {incomingAccessRequest.type === 'code-edit' ? 'Code Editor write access' : 'Hands on Deck presentation control'}.
+          </p>
+          <div className="flex items-center justify-end space-x-2 mt-3">
+            <button
+              onClick={() => {
+                broadcastAccessResponse(incomingAccessRequest.id, incomingAccessRequest.userId, incomingAccessRequest.type, false);
+                setIncomingAccessRequest(null);
+              }}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              Decline
+            </button>
+            <button
+              onClick={() => {
+                if (incomingAccessRequest.type === 'code-edit') {
+                  const updated: RoomPermissions = {
+                    ...roomPermissions,
+                    codeEditMode: 'selected',
+                    allowedEditorIds: Array.from(new Set([...roomPermissions.allowedEditorIds, incomingAccessRequest.userId])),
+                  };
+                  setRoomPermissions(updated);
+                  broadcastPermissions(updated);
+                } else {
+                  const updated: RoomPermissions = {
+                    ...roomPermissions,
+                    handsOnDeck: true,
+                    allowedPresenterIds: Array.from(new Set([...roomPermissions.allowedPresenterIds, incomingAccessRequest.userId])),
+                  };
+                  setRoomPermissions(updated);
+                  broadcastPermissions(updated);
+                }
+                broadcastAccessResponse(incomingAccessRequest.id, incomingAccessRequest.userId, incomingAccessRequest.type, true);
+                setIncomingAccessRequest(null);
+              }}
+              className="px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-xs transition-colors"
+            >
+              Grant Access
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 2. Central Meeting Workspace (Light Canvas #f8fafc with Low Border Clutter) */}
       <div className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-1.5 sm:p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]">
@@ -465,7 +623,7 @@ function ConferenceApp() {
             </div>
           )}
 
-          {/* Collaborative Code Workspace (With split video stage) */}
+          {/* Collaborative Code Workspace (With Side-by-Side Live Preview & Real-Time Sync) */}
           {activeTab === 'code-ide' && (
             <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5 min-h-0">
               <div className="flex-1 h-full min-h-0">
@@ -478,6 +636,17 @@ function ConferenceApp() {
                   onAskAIAboutCode={(fileName, code) => {}}
                   onAddFile={(newFile) => setFiles((prev) => [...prev, newFile])}
                   onDeleteFile={(id) => setFiles((prev) => prev.filter(f => f.id !== id))}
+                  isHost={isHost}
+                  canEditCode={canEditCode}
+                  roomPermissions={roomPermissions}
+                  onUpdatePermissions={(newPerms) => {
+                    setRoomPermissions(newPerms);
+                    broadcastPermissions(newPerms);
+                  }}
+                  onRequestEditAccess={() => broadcastAccessRequest('code-edit')}
+                  remoteEditorStatus={remoteEditorStatus}
+                  onBroadcastCodeEdit={(fileId, content) => broadcastCodeEdit(fileId, content)}
+                  participants={allParticipants.filter((p) => p.id !== currentUser.id)}
                 />
               </div>
 
@@ -526,7 +695,7 @@ function ConferenceApp() {
             </div>
           )}
 
-          {/* Investor Pitch Deck (With privacy watermark, slide upload & split video) */}
+          {/* Investor Pitch Deck (With multi-page PDF presentation, Hands on Deck & split video) */}
           {activeTab === 'pitch-deck' && (
             <div className="flex-1 flex flex-col lg:flex-row w-full h-full gap-2.5 min-h-0">
               <div className="flex-1 h-full min-h-0">
@@ -538,8 +707,17 @@ function ConferenceApp() {
                   currentUser={currentUser}
                   onOpenDealRoom={() => setIsDealRoomOpen(true)}
                   onUploadSlide={(newSlide) => setSlides((prev) => [...prev, newSlide])}
+                  onUploadSlides={handleUploadSlides}
                   laserPointer={laserPointer}
                   onLaserMove={broadcastLaser}
+                  isHost={isHost}
+                  canControlDeck={canControlDeck}
+                  roomPermissions={roomPermissions}
+                  onUpdatePermissions={(newPerms) => {
+                    setRoomPermissions(newPerms);
+                    broadcastPermissions(newPerms);
+                  }}
+                  onRequestDeckAccess={() => broadcastAccessRequest('hands-on-deck')}
                 />
               </div>
 

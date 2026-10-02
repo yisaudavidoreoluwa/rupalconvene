@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   Play, 
   Terminal, 
@@ -28,9 +28,17 @@ import {
   X,
   Bot,
   HelpCircle,
-  Wand2
+  Wand2,
+  Lock,
+  Unlock,
+  Users,
+  ShieldCheck,
+  Columns,
+  Rows,
+  ChevronDown,
+  UserCheck
 } from 'lucide-react';
-import { CodeFile, CodeLanguage, TerminalLog } from '@/types/meeting';
+import { CodeFile, CodeLanguage, TerminalLog, RoomPermissions, Participant } from '@/types/meeting';
 import { executeCodeInSandbox, buildHypertextPreviewBundle } from '@/lib/code-runner';
 import { explainCodeWithGemini } from '@/lib/gemini-service';
 
@@ -43,6 +51,15 @@ interface CodeWorkspaceProps {
   onAskAIAboutCode: (fileName: string, code: string) => void;
   onAddFile?: (newFile: CodeFile) => void;
   onDeleteFile?: (fileId: string) => void;
+  // Permissions & Real-time Collaboration Props
+  isHost?: boolean;
+  canEditCode?: boolean;
+  roomPermissions?: RoomPermissions;
+  onUpdatePermissions?: (permissions: RoomPermissions) => void;
+  onRequestEditAccess?: () => void;
+  remoteEditorStatus?: { name: string; fileId: string } | null;
+  onBroadcastCodeEdit?: (fileId: string, content: string) => void;
+  participants?: Participant[];
 }
 
 export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
@@ -54,14 +71,29 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   onAskAIAboutCode,
   onAddFile,
   onDeleteFile,
+  isHost = true,
+  canEditCode = true,
+  roomPermissions,
+  onUpdatePermissions,
+  onRequestEditAccess,
+  remoteEditorStatus,
+  onBroadcastCodeEdit,
+  participants = [],
 }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [activeBottomTab, setActiveBottomTab] = useState<'preview' | 'terminal'>('preview');
+  
+  // Layout states: 'side-by-side' (default), 'stacked', 'editor-only', 'preview-only'
+  const [workspaceLayout, setWorkspaceLayout] = useState<'side-by-side' | 'stacked' | 'editor-only' | 'preview-only'>('side-by-side');
+  const [activeRightTab, setActiveRightTab] = useState<'preview' | 'terminal'>('preview');
   const [activeTerminalTab, setActiveTerminalTab] = useState<'all' | 'stdout' | 'stderr' | 'metrics'>('all');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [previewKey, setPreviewKey] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  
+  // Host Permissions Dropdown & Request Feedback
+  const [showPermissionMenu, setShowPermissionMenu] = useState(false);
+  const [requestSent, setRequestSent] = useState(false);
 
   // Gemini AI In-IDE Explanation State
   const [showGeminiPanel, setShowGeminiPanel] = useState(false);
@@ -78,6 +110,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const lineNumbersRef = useRef<HTMLDivElement | null>(null);
+  const broadcastDebounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([
     {
@@ -99,10 +132,10 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
 
   const activeFile = files.find((f) => f.id === activeFileId) || files[0];
 
-  // Auto-switch to preview tab if opening an HTML or Markdown file
+  // Auto-switch right tab to preview if opening an HTML or Markdown file
   useEffect(() => {
     if (activeFile?.language === 'html' || activeFile?.language === 'markdown') {
-      setActiveBottomTab('preview');
+      setActiveRightTab('preview');
     }
   }, [activeFile?.id, activeFile?.language]);
 
@@ -113,21 +146,37 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     }
   };
 
-  // Support Tab key indentation inside textarea (2 spaces)
+  // Support Tab key indentation inside textarea (2 spaces) & Live debounced broadcast
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
+      if (!canEditCode) return;
       const target = e.currentTarget;
       const start = target.selectionStart;
       const end = target.selectionEnd;
       const value = target.value;
       const newValue = value.substring(0, start) + '  ' + value.substring(end);
       if (activeFile) {
-        onUpdateFileContent(activeFile.id, newValue);
+        handleCodeChange(newValue);
       }
       setTimeout(() => {
         target.selectionStart = target.selectionEnd = start + 2;
       }, 0);
+    }
+  };
+
+  // Debounced live code broadcast
+  const handleCodeChange = (newVal: string) => {
+    if (!activeFile || !canEditCode) return;
+    onUpdateFileContent(activeFile.id, newVal);
+
+    if (onBroadcastCodeEdit) {
+      if (broadcastDebounceRef.current) {
+        clearTimeout(broadcastDebounceRef.current);
+      }
+      broadcastDebounceRef.current = setTimeout(() => {
+        onBroadcastCodeEdit(activeFile.id, newVal);
+      }, 75); // fast 75ms debounce for smooth live collaborative editing
     }
   };
 
@@ -147,9 +196,9 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
       // Force iframe preview re-render
       setPreviewKey((k) => k + 1);
       if (activeFile.language === 'html' || activeFile.language === 'markdown' || activeFile.language === 'css') {
-        setActiveBottomTab('preview');
+        setActiveRightTab('preview');
       } else {
-        setActiveBottomTab('terminal');
+        setActiveRightTab('terminal');
       }
     } catch (err: unknown) {
       const error = err as Error;
@@ -162,7 +211,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           timestamp: new Date().toLocaleTimeString(),
         },
       ]);
-      setActiveBottomTab('terminal');
+      setActiveRightTab('terminal');
     } finally {
       setIsRunning(false);
     }
@@ -175,7 +224,6 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     setIsExplaining(true);
     setExplanationText('');
 
-    // Also notify parent copilot hook
     onAskAIAboutCode(activeFile.name, activeFile.content);
 
     try {
@@ -237,7 +285,6 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     if (!newFileName.trim()) return;
 
     let cleanName = newFileName.trim();
-    // Auto-append extension if missing
     if (!cleanName.includes('.')) {
       const extMap: Record<CodeLanguage, string> = {
         html: '.html',
@@ -277,6 +324,30 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     onSelectFile(newFile.id);
     setShowAddModal(false);
     setNewFileName('');
+  };
+
+  const handleSendRequestAccess = () => {
+    if (onRequestEditAccess) {
+      onRequestEditAccess();
+      setRequestSent(true);
+      setTimeout(() => setRequestSent(false), 4000);
+    }
+  };
+
+  // Host toggles participant in allowed list
+  const handleToggleParticipantEdit = (participantId: string) => {
+    if (!isHost || !roomPermissions || !onUpdatePermissions) return;
+    const currentList = roomPermissions.allowedEditorIds || [];
+    const isAllowed = currentList.includes(participantId);
+    const updated = isAllowed
+      ? currentList.filter((id) => id !== participantId)
+      : [...currentList, participantId];
+
+    onUpdatePermissions({
+      ...roomPermissions,
+      codeEditMode: 'selected',
+      allowedEditorIds: updated,
+    });
   };
 
   const getLanguageIcon = (lang: CodeLanguage) => {
@@ -330,8 +401,8 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
     <div className={`w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none transition-all duration-200 ${
       isFullscreen ? 'fixed inset-2 z-50 rounded-2xl shadow-2xl' : 'relative'
     }`}>
-      {/* 1. Sleek Minimal Top Navigation Bar */}
-      <div className="h-12 bg-white border-b border-slate-100 px-3 flex items-center justify-between gap-2 overflow-x-auto">
+      {/* 1. Top Navigation & Action Toolbar */}
+      <div className="h-12 bg-white border-b border-slate-100 px-3 flex items-center justify-between gap-2 overflow-x-auto flex-shrink-0 z-20">
         {/* Left: Tab list with File Language Icons */}
         <div className="flex items-center space-x-1.5 overflow-x-auto py-1 flex-1 min-w-0">
           {files.map((file) => {
@@ -351,7 +422,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
                 {file.isEntrypoint && (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" title="Main Entrypoint" />
                 )}
-                {onDeleteFile && !file.isEntrypoint && files.length > 1 && (
+                {onDeleteFile && !file.isEntrypoint && files.length > 1 && canEditCode && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -368,7 +439,7 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           })}
 
           {/* Add New File Button */}
-          {onAddFile && (
+          {onAddFile && canEditCode && (
             <button
               onClick={() => setShowAddModal(true)}
               className="flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-semibold text-slate-500 hover:text-[#0f172a] hover:bg-slate-100 transition-colors flex-shrink-0"
@@ -380,14 +451,155 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           )}
         </div>
 
-        {/* Right: Actions (Explain with Gemini AI, Copy, Share, Run & Fullscreen) */}
-        <div className="flex items-center space-x-1.5 flex-shrink-0">
-          {/* Language badge */}
-          {activeFile && (
-            <span className={`hidden md:inline-block px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold border ${getLanguageColor(activeFile.language)}`}>
-              {activeFile.language}
-            </span>
+        {/* Center: Permissions Control / Indicator (Requirement 2) */}
+        <div className="flex items-center space-x-1.5 flex-shrink-0 relative">
+          {isHost ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowPermissionMenu(!showPermissionMenu)}
+                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0f172a] text-xs font-semibold transition-colors"
+                title="Manage code edit permissions for participants"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Edit Access:</span>
+                <span className="font-bold text-blue-700">
+                  {roomPermissions?.codeEditMode === 'everyone'
+                    ? 'Everyone'
+                    : roomPermissions?.codeEditMode === 'selected'
+                    ? `Selected (${roomPermissions.allowedEditorIds?.length || 0})`
+                    : 'Host Only'}
+                </span>
+                <ChevronDown className="w-3 h-3 text-slate-500" />
+              </button>
+
+              {/* Host Permissions Popover */}
+              {showPermissionMenu && (
+                <div className="absolute top-full mt-1.5 right-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 text-xs">
+                  <div className="font-bold text-[#0f172a] pb-2 border-b border-slate-100 flex items-center justify-between">
+                    <span>Code Workspace Permissions</span>
+                    <button 
+                      onClick={() => setShowPermissionMenu(false)}
+                      className="text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 py-2">
+                    <button
+                      onClick={() => {
+                        onUpdatePermissions?.({ ...roomPermissions!, codeEditMode: 'host-only' });
+                        setShowPermissionMenu(false);
+                      }}
+                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+                        roomPermissions?.codeEditMode === 'host-only' ? 'bg-blue-50 text-blue-800 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <Lock className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
+                      <div>
+                        <div>Host Only</div>
+                        <div className="text-[10px] text-slate-500 font-normal">Attendees watch in real time</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        onUpdatePermissions?.({ ...roomPermissions!, codeEditMode: 'everyone' });
+                        setShowPermissionMenu(false);
+                      }}
+                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+                        roomPermissions?.codeEditMode === 'everyone' ? 'bg-blue-50 text-blue-800 font-bold' : 'hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <Users className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <div>
+                        <div>Everyone</div>
+                        <div className="text-[10px] text-slate-500 font-normal">All attendees can edit files</div>
+                      </div>
+                    </button>
+
+                    <div className="pt-2 border-t border-slate-100">
+                      <div className="text-[10px] font-bold uppercase text-slate-400 mb-1 px-1">
+                        Select Specific Attendees:
+                      </div>
+                      <div className="max-h-36 overflow-y-auto space-y-1">
+                        {participants.length === 0 ? (
+                          <div className="text-[11px] text-slate-400 italic px-1">No other attendees in room</div>
+                        ) : (
+                          participants.map((p) => {
+                            const isAllowed = roomPermissions?.allowedEditorIds?.includes(p.id);
+                            return (
+                              <div
+                                key={p.id}
+                                onClick={() => handleToggleParticipantEdit(p.id)}
+                                className="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-50 cursor-pointer"
+                              >
+                                <span className="truncate max-w-[140px] text-slate-700">{p.name}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={!!isAllowed}
+                                  onChange={() => {}}
+                                  className="w-3.5 h-3.5 text-blue-600 rounded"
+                                />
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              {canEditCode ? (
+                <div className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                  <UserCheck className="w-3 h-3 text-emerald-600" />
+                  <span className="hidden sm:inline">Can Edit (Host Granted)</span>
+                  <span className="sm:hidden">Edit Mode</span>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-1.5">
+                  <div className="flex items-center space-x-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-800 text-xs font-semibold border border-amber-200">
+                    <Lock className="w-3 h-3 text-amber-600" />
+                    <span>View Only</span>
+                  </div>
+                  <button
+                    onClick={handleSendRequestAccess}
+                    disabled={requestSent}
+                    className="px-2 py-1 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all disabled:opacity-50"
+                  >
+                    {requestSent ? '✓ Requested' : 'Request Edit'}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
+        </div>
+
+        {/* Right: Layout Switcher, AI, Share, Copy, Run & Fullscreen (Requirement 1) */}
+        <div className="flex items-center space-x-1.5 flex-shrink-0">
+          {/* Side-by-Side vs Stacked Layout Mode Toggle */}
+          <div className="hidden lg:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button
+              onClick={() => setWorkspaceLayout('side-by-side')}
+              className={`p-1 rounded text-xs transition-colors ${
+                workspaceLayout === 'side-by-side' ? 'bg-white text-[#0f172a] font-bold shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+              }`}
+              title="Side-by-side Layout (Editor + Live Preview)"
+            >
+              <Columns className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setWorkspaceLayout('stacked')}
+              className={`p-1 rounded text-xs transition-colors ${
+                workspaceLayout === 'stacked' ? 'bg-white text-[#0f172a] font-bold shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+              }`}
+              title="Stacked Layout (Editor Top, Preview Bottom)"
+            >
+              <Rows className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
           {/* Explain with Gemini AI Button */}
           <button
@@ -434,25 +646,46 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           <button
             onClick={handleRun}
             disabled={isRunning}
-            className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] disabled:opacity-50 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#0f172a] hover:bg-[#1e293b] disabled:opacity-50 text-white text-xs font-bold shadow-sm transition-all active:scale-95"
             title="Execute in isolated sandbox"
           >
             <Play className={`w-3.5 h-3.5 ${isRunning ? 'animate-spin' : 'fill-white'}`} />
-            <span>{isRunning ? 'Running...' : 'Run & Preview'}</span>
+            <span className="hidden xs:inline">{isRunning ? 'Running...' : 'Run & Preview'}</span>
           </button>
         </div>
       </div>
 
-      {/* 2. Main Workspace Surface: Split Editor & Runner + Optional Gemini Flyout */}
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 bg-[#0a192f] relative overflow-hidden">
-        {/* Left Side: Code Editor & Bottom Runner */}
-        <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden">
-          {/* Editor Canvas */}
-          <div className="flex-1 relative overflow-hidden flex bg-[#0a192f] min-h-[160px]">
+      {/* 2. Main Workspace Surface: Side-by-Side (Split) or Stacked Layout */}
+      <div className={`flex-1 min-h-0 bg-[#0a192f] relative overflow-hidden flex ${
+        workspaceLayout === 'stacked' ? 'flex-col' : 'flex-col md:flex-row'
+      }`}>
+        {/* LEFT / TOP PANE: Code Editor */}
+        <div className={`flex flex-col min-h-0 overflow-hidden relative ${
+          workspaceLayout === 'editor-only'
+            ? 'w-full h-full'
+            : workspaceLayout === 'preview-only'
+            ? 'hidden'
+            : workspaceLayout === 'stacked'
+            ? 'w-full h-1/2 border-b border-[#1e293b]'
+            : 'w-full md:w-1/2 h-full border-r border-[#1e293b]'
+        }`}>
+          {/* Live Remote Editor Presence Banner (Requirement 3) */}
+          {remoteEditorStatus && (
+            <div className="h-6 bg-emerald-950/70 border-b border-emerald-800/50 px-3 flex items-center justify-between text-[11px] text-emerald-300 font-mono flex-shrink-0 animate-in fade-in">
+              <span className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span>{remoteEditorStatus.name} is editing live...</span>
+              </span>
+              <span className="text-[10px] text-emerald-400/80">Synchronized</span>
+            </div>
+          )}
+
+          {/* Editor Canvas (Line Numbers + Textarea) */}
+          <div className="flex-1 relative overflow-hidden flex bg-[#0a192f] min-h-0">
             {/* Line Numbers Gutter */}
             <div 
               ref={lineNumbersRef}
-              className="w-12 py-3 bg-[#071324] text-slate-600 text-xs font-mono text-right pr-3 select-none border-r border-[#1e293b] leading-6 overflow-hidden"
+              className="w-12 py-3 bg-[#071324] text-slate-600 text-xs font-mono text-right pr-3 select-none border-r border-[#1e293b] leading-6 overflow-hidden flex-shrink-0"
             >
               {activeFile?.content.split('\n').map((_, index) => (
                 <div key={index} className="h-6">{index + 1}</div>
@@ -464,174 +697,189 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
               <textarea
                 ref={textareaRef}
                 value={activeFile?.content || ''}
-                onChange={(e) => activeFile && onUpdateFileContent(activeFile.id, e.target.value)}
+                onChange={(e) => handleCodeChange(e.target.value)}
                 onScroll={handleScroll}
                 onKeyDown={handleKeyDown}
+                readOnly={!canEditCode}
                 spellCheck={false}
-                className="w-full h-full p-3 bg-transparent text-slate-100 font-mono text-xs sm:text-sm leading-6 resize-none focus:outline-none selection:bg-blue-600/40 tab-4"
-                placeholder="// Write or paste hypertext code here..."
+                className={`w-full h-full p-3 bg-transparent text-slate-100 font-mono text-xs sm:text-sm leading-6 resize-none focus:outline-none selection:bg-blue-600/40 tab-4 ${
+                  !canEditCode ? 'cursor-not-allowed opacity-90' : ''
+                }`}
+                placeholder="// Collaborative code editor..."
               />
-            </div>
-          </div>
 
-          {/* 3. Bottom Pane: Live Browser Preview & Terminal Console */}
-          <div className="h-56 sm:h-64 bg-[#050c18] border-t border-[#1e293b] flex flex-col flex-shrink-0">
-            {/* Tab Bar: Preview vs Terminal */}
-            <div className="h-9 bg-[#071324] border-b border-[#1e293b] px-3 flex items-center justify-between text-xs select-none">
-              <div className="flex items-center space-x-1 sm:space-x-2">
-                {/* Live Preview Tab */}
-                <button
-                  onClick={() => setActiveBottomTab('preview')}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                    activeBottomTab === 'preview'
-                      ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Live Preview</span>
-                </button>
-
-                {/* Terminal Tab */}
-                <button
-                  onClick={() => setActiveBottomTab('terminal')}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold transition-all ${
-                    activeBottomTab === 'terminal'
-                      ? 'bg-[#1e293b] text-white border border-slate-700'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Terminal className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Terminal Logs</span>
-                </button>
-              </div>
-
-              {/* Conditional Controls based on active bottom tab */}
-              {activeBottomTab === 'preview' ? (
-                <div className="flex items-center space-x-2 text-[11px]">
-                  {/* Device Switcher */}
-                  <div className="hidden xs:flex items-center bg-[#0a192f] p-0.5 rounded-lg border border-slate-800">
-                    <button
-                      onClick={() => setPreviewDevice('desktop')}
-                      className={`p-1 rounded ${previewDevice === 'desktop' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Desktop view (100%)"
-                    >
-                      <Monitor className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => setPreviewDevice('tablet')}
-                      className={`p-1 rounded ${previewDevice === 'tablet' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Tablet view (768px)"
-                    >
-                      <Tablet className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => setPreviewDevice('mobile')}
-                      className={`p-1 rounded ${previewDevice === 'mobile' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
-                      title="Mobile view (375px)"
-                    >
-                      <Smartphone className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Refresh Preview */}
-                  <button
-                    onClick={() => setPreviewKey((k) => k + 1)}
-                    className="p-1 rounded text-slate-400 hover:text-white transition-colors"
-                    title="Reload live preview"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-3 text-[11px] text-slate-400 font-mono">
-                  {/* Terminal filter tabs */}
-                  <div className="flex items-center space-x-1">
-                    <button
-                      onClick={() => setActiveTerminalTab('all')}
-                      className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'all' ? 'bg-[#1e293b] text-white' : 'hover:text-white'}`}
-                    >
-                      All
-                    </button>
-                    <button
-                      onClick={() => setActiveTerminalTab('stdout')}
-                      className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'stdout' ? 'bg-[#1e293b] text-emerald-400' : 'hover:text-white'}`}
-                    >
-                      Stdout
-                    </button>
-                    <button
-                      onClick={() => setActiveTerminalTab('stderr')}
-                      className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'stderr' ? 'bg-[#1e293b] text-red-400' : 'hover:text-white'}`}
-                    >
-                      Errors
-                    </button>
-                  </div>
-
-                  {/* Metrics */}
-                  <div className="hidden sm:flex items-center space-x-2">
-                    <span className="flex items-center space-x-1 text-slate-400">
-                      <Clock className="w-3 h-3 text-blue-400" />
-                      <span>{benchmarkMetrics.timeMs}ms</span>
-                    </span>
-                    <span className="flex items-center space-x-1 text-slate-400">
-                      <Cpu className="w-3 h-3 text-indigo-400" />
-                      <span>{benchmarkMetrics.cpu}</span>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Content Body */}
-            <div className="flex-1 overflow-hidden relative bg-[#050c18]">
-              {activeBottomTab === 'preview' ? (
-                /* Interactive Live Preview Iframe */
-                <div className="w-full h-full flex items-center justify-center p-2 bg-[#050c18] overflow-auto">
-                  <div 
-                    className={`h-full bg-white rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${
-                      previewDevice === 'mobile'
-                        ? 'w-[375px]'
-                        : previewDevice === 'tablet'
-                        ? 'w-[768px]'
-                        : 'w-full'
-                    }`}
-                  >
-                    <iframe
-                      key={previewKey}
-                      srcDoc={previewBundle}
-                      title="Hypertext Sandbox Preview"
-                      sandbox="allow-scripts allow-modals"
-                      className="w-full h-full border-0 bg-white"
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Terminal Console Logs */
-                <div className="w-full h-full p-3 overflow-y-auto font-mono text-xs space-y-1 bg-[#050c18]">
-                  {filteredLogs.map((log) => {
-                    let colorClass = 'text-slate-300';
-                    if (log.type === 'stderr') colorClass = 'text-red-400 bg-red-950/20 px-1 py-0.5 rounded';
-                    if (log.type === 'system') colorClass = 'text-blue-400 font-medium';
-                    if (log.type === 'benchmark') colorClass = 'text-indigo-400 font-bold border-t border-slate-800 pt-1 mt-1';
-
-                    return (
-                      <div key={log.id} className="flex items-start space-x-2 leading-relaxed">
-                        <span className="text-slate-600 text-[10px] select-none">{log.timestamp}</span>
-                        <pre className={`whitespace-pre-wrap flex-1 break-all ${colorClass}`}>
-                          {log.text}
-                        </pre>
-                      </div>
-                    );
-                  })}
+              {/* Read Only Watermark when user does not have permission */}
+              {!canEditCode && (
+                <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-[#0f172a]/90 backdrop-blur-md border border-slate-700 text-amber-300 text-xs flex items-center space-x-2 shadow-lg z-10 pointer-events-none">
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Read Only • Controlled by Host</span>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* 4. Gemini AI Explanation Flyout / Side Drawer */}
+        {/* RIGHT / BOTTOM PANE: Live Browser Preview & Terminal Console (Requirement 1) */}
+        <div className={`flex flex-col min-h-0 bg-[#050c18] overflow-hidden ${
+          workspaceLayout === 'preview-only'
+            ? 'w-full h-full'
+            : workspaceLayout === 'editor-only'
+            ? 'hidden'
+            : workspaceLayout === 'stacked'
+            ? 'w-full h-1/2'
+            : 'w-full md:w-1/2 h-full'
+        }`}>
+          {/* Right Sub-Header: Live Preview vs Terminal Console Switcher */}
+          <div className="h-10 bg-[#071324] border-b border-[#1e293b] px-3 flex items-center justify-between text-xs select-none flex-shrink-0">
+            <div className="flex items-center space-x-1.5">
+              {/* Live Preview Tab */}
+              <button
+                onClick={() => setActiveRightTab('preview')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeRightTab === 'preview'
+                    ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Live Preview</span>
+              </button>
+
+              {/* Terminal Logs Tab */}
+              <button
+                onClick={() => setActiveRightTab('terminal')}
+                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeRightTab === 'terminal'
+                    ? 'bg-[#1e293b] text-white border border-slate-700'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5 text-blue-400" />
+                <span>Terminal Console</span>
+              </button>
+            </div>
+
+            {/* Controls depending on active right tab */}
+            {activeRightTab === 'preview' ? (
+              <div className="flex items-center space-x-2">
+                {/* Viewport Device Frame Switcher */}
+                <div className="flex items-center bg-[#0a192f] p-0.5 rounded-lg border border-slate-800">
+                  <button
+                    onClick={() => setPreviewDevice('desktop')}
+                    className={`p-1 rounded ${previewDevice === 'desktop' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    title="Desktop view (100%)"
+                  >
+                    <Monitor className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => setPreviewDevice('tablet')}
+                    className={`p-1 rounded ${previewDevice === 'tablet' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    title="Tablet view (768px)"
+                  >
+                    <Tablet className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => setPreviewDevice('mobile')}
+                    className={`p-1 rounded ${previewDevice === 'mobile' ? 'bg-[#1e293b] text-white' : 'text-slate-500 hover:text-slate-300'}`}
+                    title="Mobile view (375px)"
+                  >
+                    <Smartphone className="w-3 h-3" />
+                  </button>
+                </div>
+
+                {/* Reload Preview Button */}
+                <button
+                  onClick={() => setPreviewKey((k) => k + 1)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  title="Reload Live Preview"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-[11px] text-slate-400 font-mono">
+                <div className="flex items-center space-x-1">
+                  <button
+                    onClick={() => setActiveTerminalTab('all')}
+                    className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'all' ? 'bg-[#1e293b] text-white' : 'hover:text-white'}`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setActiveTerminalTab('stdout')}
+                    className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'stdout' ? 'bg-[#1e293b] text-emerald-400' : 'hover:text-white'}`}
+                  >
+                    Stdout
+                  </button>
+                  <button
+                    onClick={() => setActiveTerminalTab('stderr')}
+                    className={`px-1.5 py-0.5 rounded text-[10px] ${activeTerminalTab === 'stderr' ? 'bg-[#1e293b] text-red-400' : 'hover:text-white'}`}
+                  >
+                    Errors
+                  </button>
+                </div>
+
+                <div className="hidden sm:flex items-center space-x-2 pl-2 border-l border-slate-800">
+                  <span className="flex items-center space-x-1 text-slate-400">
+                    <Clock className="w-3 h-3 text-blue-400" />
+                    <span>{benchmarkMetrics.timeMs}ms</span>
+                  </span>
+                  <span className="flex items-center space-x-1 text-slate-400">
+                    <Cpu className="w-3 h-3 text-indigo-400" />
+                    <span>{benchmarkMetrics.cpu}</span>
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Body: Live Iframe Canvas or Terminal Console */}
+          <div className="flex-1 overflow-hidden relative bg-[#050c18] flex items-center justify-center">
+            {activeRightTab === 'preview' ? (
+              <div className="w-full h-full flex items-center justify-center p-2 bg-[#050c18] overflow-auto">
+                <div 
+                  className={`h-full bg-white rounded-xl overflow-hidden shadow-2xl transition-all duration-300 ${
+                    previewDevice === 'mobile'
+                      ? 'w-[375px]'
+                      : previewDevice === 'tablet'
+                      ? 'w-[768px]'
+                      : 'w-full'
+                  }`}
+                >
+                  <iframe
+                    key={previewKey}
+                    srcDoc={previewBundle}
+                    title="Live Hypertext Sandbox Preview"
+                    sandbox="allow-scripts allow-modals"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full p-3 overflow-y-auto font-mono text-xs space-y-1 bg-[#050c18]">
+                {filteredLogs.map((log) => {
+                  let colorClass = 'text-slate-300';
+                  if (log.type === 'stderr') colorClass = 'text-red-400 bg-red-950/20 px-1 py-0.5 rounded';
+                  if (log.type === 'system') colorClass = 'text-blue-400 font-medium';
+                  if (log.type === 'benchmark') colorClass = 'text-indigo-400 font-bold border-t border-slate-800 pt-1 mt-1';
+
+                  return (
+                    <div key={log.id} className="flex items-start space-x-2 leading-relaxed">
+                      <span className="text-slate-600 text-[10px] select-none">{log.timestamp}</span>
+                      <pre className={`whitespace-pre-wrap flex-1 break-all ${colorClass}`}>
+                        {log.text}
+                      </pre>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 3. Gemini AI Explanation Flyout Drawer (Side overlay) */}
         {showGeminiPanel && (
-          <div className="w-full md:w-96 lg:w-[420px] bg-[#071324] border-l border-[#1e293b] flex flex-col h-full z-20 animate-in slide-in-from-right duration-200">
+          <div className="absolute top-0 right-0 w-full sm:w-96 md:w-[420px] bg-[#071324] border-l border-[#1e293b] flex flex-col h-full z-30 shadow-2xl animate-in slide-in-from-right duration-200">
             {/* Header */}
             <div className="p-3.5 bg-[#0a192f] border-b border-[#1e293b] flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -678,117 +926,104 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
                     </div>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs font-semibold text-white">Gemini 3.5 is analyzing logic...</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Evaluating architecture, security, and standards</p>
+                    <p className="text-xs font-bold text-white">Analyzing Code Architecture</p>
+                    <p className="text-[11px] text-slate-400 mt-1">Google Gemini 3.5 evaluating syntax, logic, and complexity...</p>
+                  </div>
+                </div>
+              ) : explanationText ? (
+                <div className="prose prose-invert prose-xs max-w-none space-y-3">
+                  <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-900/40 text-blue-200 text-[11px]">
+                    <span className="font-bold flex items-center gap-1 mb-1">
+                      <Bot className="w-3.5 h-3.5 text-blue-400" />
+                      Gemini Deep Learning Summary
+                    </span>
+                    Real-time synthesis for peer developers and technical reviewers.
+                  </div>
+                  <div className="whitespace-pre-wrap font-sans text-slate-200 leading-relaxed">
+                    {explanationText}
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3.5 prose prose-invert max-w-none">
-                  <div className="whitespace-pre-wrap leading-relaxed text-slate-300 font-sans text-xs">
-                    {explanationText}
-                  </div>
+                <div className="flex flex-col items-center justify-center h-48 text-slate-500 text-center p-4">
+                  <HelpCircle className="w-8 h-8 mb-2 opacity-50" />
+                  <p className="text-xs">Click &quot;Explain with AI&quot; above to get a complete technical breakdown.</p>
                 </div>
               )}
             </div>
 
-            {/* Follow-up Question Input */}
-            <div className="p-3 bg-[#0a192f] border-t border-[#1e293b]">
-              <form onSubmit={handleAskFollowUp} className="flex items-center space-x-1.5">
-                <input
-                  type="text"
-                  value={geminiQuery}
-                  onChange={(e) => setGeminiQuery(e.target.value)}
-                  placeholder="Ask Gemini about this code..."
-                  disabled={isFollowUpLoading || isExplaining}
-                  className="flex-1 px-3 py-2 rounded-xl bg-[#071324] border border-[#1e293b] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  type="submit"
-                  disabled={!geminiQuery.trim() || isFollowUpLoading || isExplaining}
-                  className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white transition-all shadow-xs"
-                >
-                  <Send className={`w-3.5 h-3.5 ${isFollowUpLoading ? 'animate-spin' : ''}`} />
-                </button>
-              </form>
-            </div>
+            {/* Follow-up question input */}
+            <form onSubmit={handleAskFollowUp} className="p-3 bg-[#0a192f] border-t border-[#1e293b] flex items-center space-x-2">
+              <input
+                type="text"
+                value={geminiQuery}
+                onChange={(e) => setGeminiQuery(e.target.value)}
+                placeholder="Ask Gemini about this code..."
+                disabled={isExplaining || isFollowUpLoading}
+                className="flex-1 bg-[#050c18] border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={!geminiQuery.trim() || isExplaining || isFollowUpLoading}
+                className="p-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white transition-colors"
+                title="Send follow-up question"
+              >
+                <Send className={`w-3.5 h-3.5 ${isFollowUpLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </form>
           </div>
         )}
       </div>
 
-      {/* 5. Add File Modal */}
+      {/* 4. Add File Modal */}
       {showAddModal && (
-        <div 
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in"
-          onClick={() => setShowAddModal(false)}
-        >
-          <div 
-            className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center space-x-2">
-                <div className="p-2 rounded-xl bg-blue-50 text-blue-700">
-                  <Code2 className="w-4 h-4" />
-                </div>
-                <h3 className="text-sm font-bold text-[#0f172a]">Create New Code File</h3>
-              </div>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-full text-slate-400 hover:bg-slate-100"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-150">
+            <h3 className="text-sm font-bold text-[#0f172a]">Create New Hypertext File</h3>
+            <p className="text-xs text-slate-500 mt-1">Add a new file to the isolated sandbox environment.</p>
 
-            <form onSubmit={handleCreateFile} className="space-y-4">
+            <form onSubmit={handleCreateFile} className="mt-4 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                  File Name
-                </label>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">File Name</label>
                 <input
                   type="text"
                   value={newFileName}
                   onChange={(e) => setNewFileName(e.target.value)}
-                  placeholder="e.g. hero-section.html, animation.css, app.js"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. navigation.html, styles.css"
                   autoFocus
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-[#0f172a] focus:outline-none focus:border-blue-600"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                  Hypertext / Script Language
-                </label>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  {(['html', 'css', 'javascript', 'typescript', 'markdown', 'python'] as CodeLanguage[]).map((lang) => (
-                    <button
-                      type="button"
-                      key={lang}
-                      onClick={() => setNewFileLang(lang)}
-                      className={`p-2 rounded-xl border text-center font-bold capitalize transition-all ${
-                        newFileLang === lang
-                          ? 'bg-[#0f172a] text-white border-[#0f172a]'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {lang}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Language</label>
+                <select
+                  value={newFileLang}
+                  onChange={(e) => setNewFileLang(e.target.value as CodeLanguage)}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-[#0f172a] focus:outline-none focus:border-blue-600 bg-white"
+                >
+                  <option value="html">HTML (HyperText Markup)</option>
+                  <option value="css">CSS (Cascading Styles)</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="markdown">Markdown</option>
+                  <option value="python">Python</option>
+                  <option value="sql">SQL</option>
+                  <option value="json">JSON</option>
+                </select>
               </div>
 
               <div className="flex items-center justify-end space-x-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={!newFileName.trim()}
-                  className="px-4 py-2 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] disabled:opacity-50 text-white text-xs font-bold transition-all shadow-md"
+                  className="px-4 py-1.5 rounded-xl text-xs font-bold bg-[#0f172a] hover:bg-[#1e293b] text-white disabled:opacity-50 transition-colors"
                 >
                   Create File
                 </button>
