@@ -8,7 +8,7 @@ import {
   Check, 
   LayoutGrid, 
   Maximize2, 
-  Share2, 
+  UserPlus, 
   Eye, 
   EyeOff, 
   ArrowLeft,
@@ -78,122 +78,108 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
 
   return (
-    <header className="h-16 px-4 md:px-6 bg-white border-b border-slate-100 flex items-center justify-between select-none relative z-30 shadow-xs">
-      {/* Left: Branding & Session Info */}
-      <div className="flex items-center space-x-3 md:space-x-4">
+    <header className="h-14 px-3 sm:px-5 bg-white border-b border-slate-100 flex items-center justify-between select-none relative z-30 shadow-xs">
+      {/* Left: Branding & Session Room Info */}
+      <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0">
         {onBackToPortal && (
           <button
             onClick={onBackToPortal}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 text-[#0f172a] text-xs font-semibold transition-colors"
+            className="p-1.5 rounded-xl text-slate-500 hover:text-[#0f172a] hover:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
             title="Return to Pre-Join Lobby"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Lobby</span>
+            <ArrowLeft className="w-4 h-4" />
           </button>
         )}
 
-        <div className="flex items-center space-x-2.5">
-          {/* Rupal clean navy logo box */}
-          <div className="w-8 h-8 rounded-xl bg-[#0f172a] shadow-xs flex items-center justify-center p-1">
-            <span className="font-extrabold text-base text-white">
-              R
-            </span>
+        <div className="flex items-center space-x-2.5 min-w-0">
+          {/* Rupal clean navy logo */}
+          <div className="w-7 h-7 rounded-xl bg-[#0f172a] shadow-xs flex items-center justify-center p-1 flex-shrink-0">
+            <span className="font-extrabold text-sm text-white">R</span>
           </div>
 
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-extrabold text-sm md:text-base tracking-tight text-[#0f172a]">
-                Rupal Convene
-              </span>
-              <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-[#0f172a]">
-                Enterprise
-              </span>
-            </div>
-            <div className="text-xs text-slate-500 flex items-center space-x-2">
-              <span className="font-medium text-slate-700 truncate max-w-[120px] md:max-w-[220px]">
-                {title}
-              </span>
-              <span className="text-slate-300">•</span>
+          <div className="flex items-center space-x-2 min-w-0">
+            <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0f172a] whitespace-nowrap hidden xs:inline">
+              Rupal Convene
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 hidden sm:inline">
+              Enterprise
+            </span>
+
+            {/* Room Code with Copy Link */}
+            <div className="flex items-center space-x-1.5 pl-1 text-xs">
+              <span className="text-slate-300 hidden sm:inline">•</span>
               <button 
                 onClick={handleCopyCode} 
-                className="hover:text-blue-700 transition-colors flex items-center space-x-1 text-slate-500 font-mono text-[11px]"
-                title="Click to copy meeting link"
+                className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 font-mono text-[11px] font-medium transition-colors"
+                title="Copy conference invite link"
               >
                 <span>{roomCode}</span>
-                {copied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 opacity-60" />}
+                {copied ? (
+                  <Check className="w-3 h-3 text-emerald-600" />
+                ) : (
+                  <Copy className="w-3 h-3 text-slate-400" />
+                )}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Middle: Session Status & Watermark Badge */}
-      <div className="hidden lg:flex items-center space-x-3">
-        {/* Live Timer */}
-        <div className="flex items-center space-x-2 px-3 py-1 rounded-full bg-slate-50 text-xs text-[#0f172a] font-semibold">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-mono">{formatTime(elapsedSeconds)}</span>
+      {/* Center: Live Session Indicators (Streamlined & Minimal) */}
+      <div className="hidden md:flex items-center space-x-2">
+        {/* Live Timer Pill */}
+        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-100/80 text-[11px] text-[#0f172a] font-semibold">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-mono text-slate-700">{formatTime(elapsedSeconds)}</span>
         </div>
 
         {/* Recording Toggle */}
         <button
           onClick={onToggleRecording}
-          className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
             isRecording
               ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
-              : 'bg-slate-50 text-slate-600 hover:text-slate-900'
+              : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100/80'
           }`}
+          title={isRecording ? 'Stop Recording' : 'Start 1080p Cloud Recording'}
         >
-          <Radio className={`w-3.5 h-3.5 ${isRecording ? 'animate-pulse text-red-500' : ''}`} />
+          <Radio className={`w-3 h-3 ${isRecording ? 'animate-pulse text-red-500' : 'text-slate-400'}`} />
           <span>{isRecording ? 'REC 1080p' : 'Record'}</span>
         </button>
 
-        {/* Security / Watermark Badge */}
+        {/* Dynamic Watermark Security Toggle */}
         <button
           onClick={onToggleWatermark}
-          className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+          className={`p-1.5 rounded-full transition-all text-xs ${
             isWatermarkActive
               ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
-              : 'bg-slate-50 text-slate-600 hover:text-slate-900'
+              : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-100/80'
           }`}
-          title="Toggle dynamic screen-privacy watermark overlay"
+          title={isWatermarkActive ? 'Watermark Active (Click to toggle)' : 'Watermark Inactive'}
         >
           {isWatermarkActive ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-          <span>{isWatermarkActive ? 'Watermark Active' : 'Watermark Off'}</span>
         </button>
 
-        {/* E2E Security Badge */}
-        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-xs text-emerald-700 font-semibold">
+        {/* Subtle E2EE Shield */}
+        <div 
+          className="flex items-center space-x-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium"
+          title="256-bit DTLS-SRTP End-to-End Encryption Verified"
+        >
           <ShieldCheck className="w-3.5 h-3.5" />
-          <span className="text-[11px]">E2EE Protected</span>
+          <span className="hidden lg:inline text-[10px]">E2EE</span>
         </div>
-      </div>
-
-      {/* Right: Docs, Layout, Invite & User Profile */}
-      <div className="flex items-center space-x-2 md:space-x-3">
-        {/* Docs Button */}
-        {onOpenDocs && (
-          <button
-            onClick={onOpenDocs}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors"
-            title="Open Documentation & SDK Hub"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden md:inline">Docs & API</span>
-          </button>
-        )}
 
         {/* Green room badge if speakers waiting */}
         {greenRoomParticipants.length > 0 && (
-          <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-            </span>
+          <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             <span>{greenRoomParticipants.length} Waiting</span>
           </div>
         )}
+      </div>
 
+      {/* Right: Layout, Documentation, Invite & User Profile */}
+      <div className="flex items-center space-x-2 sm:space-x-2.5">
         {/* Layout Switcher */}
         <div className="flex items-center bg-slate-100 p-0.5 rounded-xl">
           <button
@@ -216,16 +202,28 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
           </button>
         </div>
 
-        {/* Invite Button (Navy Blue) */}
+        {/* Docs Button */}
+        {onOpenDocs && (
+          <button
+            onClick={onOpenDocs}
+            className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-semibold transition-colors flex items-center space-x-1"
+            title="Open Documentation & API Specs"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden xl:inline text-[11px]">Docs</span>
+          </button>
+        )}
+
+        {/* Invite Button (Navy Pill) */}
         <button
           onClick={onOpenInvite}
-          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-xs active:scale-95"
+          className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-xs active:scale-95 touch-manipulation"
         >
-          <Share2 className="w-3.5 h-3.5" />
+          <UserPlus className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Invite</span>
         </button>
 
-        {/* Authenticated User Menu */}
+        {/* User Profile */}
         <UserProfileMenu />
       </div>
     </header>

@@ -63,10 +63,12 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   };
 
   const badge = getRoleBadge(participant.role);
+  const cleanName = (participant.name || 'Participant').replace(/\s*\(You\)\s*$/i, '').trim();
 
   return (
     <div
-      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] transition-all duration-200 flex flex-col justify-between shadow-xs select-none touch-manipulation ${
+      onDoubleClick={onPinToggle}
+      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] transition-all duration-200 flex flex-col justify-between shadow-xs select-none touch-manipulation cursor-pointer ${
         participant.isSpeaking
           ? 'ring-2 ring-emerald-500 shadow-emerald-500/20'
           : isPinned
@@ -127,8 +129,9 @@ export const VideoTile: React.FC<VideoTileProps> = ({
             </div>
 
             <div className="text-center z-10 px-2">
-              <div className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px] sm:max-w-[200px]">
-                {participant.name} {isSelf && '(You)'}
+              <div className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px] sm:max-w-[200px] flex items-center justify-center">
+                <span className="truncate">{cleanName}</span>
+                {isSelf && <span className="text-slate-400 font-normal ml-1 text-xs">(You)</span>}
               </div>
               <div className="text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[160px] sm:max-w-[200px] font-medium">
                 {participant.jobTitle || 'Active Member'}
@@ -181,8 +184,9 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
       {/* Bottom Bar: Name Tag & Speaking Indicator */}
       <div className="relative z-10 p-2 sm:p-2.5 flex items-center justify-between w-full pointer-events-none">
-        <div className="px-2 py-1 rounded-md bg-[#0f172a]/90 text-white text-[11px] sm:text-xs font-semibold backdrop-blur-md flex items-center space-x-1.5 shadow-xs max-w-[80%] truncate pointer-events-auto">
-          <span className="truncate">{participant.name} {isSelf && '(You)'}</span>
+        <div className="px-2 py-1 rounded-md bg-[#0f172a]/90 text-white text-[11px] sm:text-xs font-semibold backdrop-blur-md flex items-center space-x-1 shadow-xs max-w-[80%] truncate pointer-events-auto">
+          <span className="truncate">{cleanName}</span>
+          {isSelf && <span className="text-slate-400 font-normal text-[10px]">(You)</span>}
         </div>
 
         {/* Dynamic Speaking Waveform */}

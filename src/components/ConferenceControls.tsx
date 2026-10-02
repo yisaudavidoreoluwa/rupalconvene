@@ -17,7 +17,6 @@ import {
   PhoneOff, 
   ShieldCheck, 
   Smile,
-  Subtitles,
   Briefcase,
   MoreHorizontal,
   X
@@ -39,7 +38,10 @@ interface ConferenceControlsProps {
   participantCount?: number;
   unreadCount?: number;
   roomCode?: string;
+  onSendReaction?: (emoji: string) => void;
 }
+
+const EMOJI_LIST = ['❤️', '👏', '👍', '🔥', '🎉', '🚀'];
 
 export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   currentUser,
@@ -56,10 +58,10 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   participantCount = 1,
   unreadCount = 0,
   roomCode = 'RUPAL-804-SYNC',
+  onSendReaction,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileTools, setShowMobileTools] = useState(false);
-  const [captionsActive, setCaptionsActive] = useState(true);
   const [currentTime, setCurrentTime] = useState('14:35');
 
   React.useEffect(() => {
@@ -71,6 +73,13 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
     const interval = setInterval(updateTime, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleSelectEmoji = (emoji: string) => {
+    if (onSendReaction) {
+      onSendReaction(emoji);
+    }
+    setShowEmojiPicker(false);
+  };
 
   return (
     <>
@@ -85,7 +94,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <span className="text-sm font-bold text-[#0f172a]">Suite Workspace Tools</span>
+              <span className="text-sm font-bold text-[#0f172a]">Workspace Suite Tools</span>
               <button 
                 onClick={() => setShowMobileTools(false)}
                 className="p-1.5 rounded-full text-slate-400 hover:bg-slate-100"
@@ -97,6 +106,19 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             <div className="grid grid-cols-3 gap-2.5">
               <button
                 onClick={() => {
+                  onTabChange('pitch-deck');
+                  setShowMobileTools(false);
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-2xl text-xs font-semibold gap-1.5 transition-colors ${
+                  activeTab === 'pitch-deck' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-700'
+                }`}
+              >
+                <Presentation className="w-5 h-5 text-blue-600" />
+                <span>Presentation</span>
+              </button>
+
+              <button
+                onClick={() => {
                   onTabChange('code-ide');
                   setShowMobileTools(false);
                 }}
@@ -104,7 +126,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
                   activeTab === 'code-ide' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-700'
                 }`}
               >
-                <Code className="w-5 h-5 text-blue-600" />
+                <Code className="w-5 h-5 text-indigo-600" />
                 <span>IDE Code</span>
               </button>
 
@@ -117,21 +139,8 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
                   activeTab === 'whiteboard' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-700'
                 }`}
               >
-                <Layout className="w-5 h-5 text-indigo-600" />
+                <Layout className="w-5 h-5 text-sky-600" />
                 <span>Whiteboard</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onTabChange('pitch-deck');
-                  setShowMobileTools(false);
-                }}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl text-xs font-semibold gap-1.5 transition-colors ${
-                  activeTab === 'pitch-deck' ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-slate-50 text-slate-700'
-                }`}
-              >
-                <Presentation className="w-5 h-5 text-emerald-600" />
-                <span>Pitch Deck</span>
               </button>
 
               <button
@@ -176,7 +185,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
       )}
 
       {/* Main Floating / Bottom Control Dock */}
-      <div className="h-16 sm:h-20 bg-white border-t border-slate-100 px-2 sm:px-6 flex items-center justify-between z-30 select-none shadow-xs w-full">
+      <div className="h-16 sm:h-20 bg-white border-t border-slate-100 px-3 sm:px-6 flex items-center justify-between z-30 select-none shadow-xs w-full relative">
         {/* Left: Meeting Time & Room Identifier */}
         <div className="hidden lg:flex items-center space-x-3 text-sm font-semibold text-[#0f172a]">
           <span className="font-mono text-xs text-slate-500">{currentTime}</span>
@@ -188,8 +197,8 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           </div>
         </div>
 
-        {/* Center: Essential Controls (Mic, Video, Screen, End) */}
-        <div className="flex items-center space-x-1.5 sm:space-x-2.5 mx-auto lg:mx-0">
+        {/* Center: Essential Controls (Mic, Video, Screen, Tools, End) */}
+        <div className="flex items-center space-x-1.5 sm:space-x-2.5 mx-auto lg:mx-0 relative">
           {/* Mic Toggle */}
           <button
             onClick={onToggleMic}
@@ -216,7 +225,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             {currentUser.isVideoOff ? <VideoOff className="w-4 h-4" /> : <Video className="w-4 h-4" />}
           </button>
 
-          {/* Screen Share (Hidden on small mobile) */}
+          {/* Screen Share (Desktop only) */}
           <button
             onClick={onToggleScreenShare}
             className={`p-2.5 sm:p-3 rounded-full transition-colors hidden sm:inline-flex touch-manipulation ${
@@ -229,7 +238,20 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             <ScreenShare className="w-4 h-4" />
           </button>
 
-          {/* In-Call Developer IDE (Direct button on desktop, drawer on mobile) */}
+          {/* Presentation Deck Viewer (Direct Button) */}
+          <button
+            onClick={() => onTabChange(activeTab === 'pitch-deck' ? 'stage' : 'pitch-deck')}
+            className={`p-2.5 sm:p-3 rounded-full transition-colors hidden md:inline-flex touch-manipulation ${
+              activeTab === 'pitch-deck'
+                ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
+                : 'bg-[#0f172a] text-white hover:bg-[#1e293b]'
+            }`}
+            title="Presentation & Slide Deck"
+          >
+            <Presentation className="w-4 h-4" />
+          </button>
+
+          {/* In-Call Developer IDE */}
           <button
             onClick={() => onTabChange(activeTab === 'code-ide' ? 'stage' : 'code-ide')}
             className={`p-2.5 sm:p-3 rounded-full transition-colors hidden md:inline-flex touch-manipulation ${
@@ -242,7 +264,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             <Code className="w-4 h-4" />
           </button>
 
-          {/* Architecture Whiteboard (Hidden on small screens) */}
+          {/* Architecture Whiteboard */}
           <button
             onClick={() => onTabChange(activeTab === 'whiteboard' ? 'stage' : 'whiteboard')}
             className={`p-2.5 sm:p-3 rounded-full transition-colors hidden md:inline-flex touch-manipulation ${
@@ -268,7 +290,32 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             <Hand className="w-4 h-4" />
           </button>
 
-          {/* Mobile "More Tools" Button (Opens drawer for IDE, whiteboard, deck, AI) */}
+          {/* Live Emoji Reactions Popover */}
+          <div className="relative">
+            <button
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="p-2.5 sm:p-3 rounded-full bg-[#0f172a] text-white hover:bg-[#1e293b] transition-colors touch-manipulation"
+              title="React with emoji"
+            >
+              <Smile className="w-4 h-4 text-amber-300" />
+            </button>
+
+            {showEmojiPicker && (
+              <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-white border border-slate-100 rounded-2xl shadow-xl p-2 flex items-center space-x-1 animate-in zoom-in-95 duration-150 z-50">
+                {EMOJI_LIST.map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleSelectEmoji(emoji)}
+                    className="p-2 text-xl hover:scale-125 transition-transform active:scale-95 touch-manipulation"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Mobile "More Tools" Button */}
           <button
             onClick={() => setShowMobileTools(true)}
             className="p-2.5 rounded-full bg-slate-100 hover:bg-slate-200 text-[#0f172a] md:hidden touch-manipulation"
@@ -287,7 +334,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           </button>
         </div>
 
-        {/* Right: AI Copilot, Chat & Deal Room */}
+        {/* Right: AI Copilot, Chat */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
           {/* Gemini AI Copilot Button */}
           <button

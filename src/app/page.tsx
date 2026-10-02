@@ -120,10 +120,10 @@ function ConferenceApp() {
     }
   }, []);
 
-  // Build current participant profile
+  // Build current participant profile (Clean name without duplicate (You))
   const currentUser: Participant = {
     id: user?.id || 'user-self',
-    name: user?.name ? `${user.name} (You)` : 'You (Host)',
+    name: user?.name || 'Conference Host',
     email: user?.email || '',
     role: user?.role || 'tech-lead',
     avatar: getUserAvatar(user?.avatar, user?.name || 'You'),
@@ -145,6 +145,12 @@ function ConferenceApp() {
     isSpeaking: isLocalSpeaking,
     toggleMute: webrtcToggleMute,
     toggleVideo: webrtcToggleVideo,
+    broadcastSlideChange,
+    broadcastLaser,
+    broadcastReaction,
+    syncedSlideIndex,
+    laserPointer,
+    reactions,
   } = useWebRTC({
     roomCode,
     currentUser: {
@@ -153,6 +159,20 @@ function ConferenceApp() {
     },
     enabled: isAuthenticated,
   });
+
+  // Synchronize slide changes across all devices in the room
+  useEffect(() => {
+    if (syncedSlideIndex !== null && syncedSlideIndex !== currentSlideIndex) {
+      if (syncedSlideIndex >= 0 && syncedSlideIndex < slides.length) {
+        setCurrentSlideIndex(syncedSlideIndex);
+      }
+    }
+  }, [syncedSlideIndex, slides.length, currentSlideIndex]);
+
+  const handleSlideChange = (newIndex: number) => {
+    setCurrentSlideIndex(newIndex);
+    broadcastSlideChange(newIndex);
+  };
 
   // Attach local media stream to localVideoRef element
   useEffect(() => {
@@ -500,11 +520,13 @@ function ConferenceApp() {
                 <PitchDeckViewer
                   slides={slides}
                   currentSlideIndex={currentSlideIndex}
-                  onSlideChange={setCurrentSlideIndex}
+                  onSlideChange={handleSlideChange}
                   isWatermarkActive={isWatermarkActive}
                   currentUser={currentUser}
                   onOpenDealRoom={() => setIsDealRoomOpen(true)}
                   onUploadSlide={(newSlide) => setSlides((prev) => [...prev, newSlide])}
+                  laserPointer={laserPointer}
+                  onLaserMove={broadcastLaser}
                 />
               </div>
 
@@ -587,7 +609,23 @@ function ConferenceApp() {
         participantCount={allParticipants.length}
         unreadCount={chatMessages.length > 2 ? 1 : 0}
         roomCode={roomCode}
+        onSendReaction={broadcastReaction}
       />
+
+      {/* Floating Live Emoji Reactions Overlay */}
+      {reactions.length > 0 && (
+        <div className="fixed bottom-24 right-6 sm:right-10 pointer-events-none z-50 flex flex-col items-end space-y-2.5">
+          {reactions.map((r) => (
+            <div 
+              key={r.id} 
+              className="flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#0f172a]/90 backdrop-blur-md text-white shadow-2xl border border-slate-700/60 animate-in slide-in-from-bottom duration-200 animate-bounce"
+            >
+              <span className="text-xl sm:text-2xl">{r.emoji}</span>
+              <span className="text-[11px] font-semibold text-slate-300">{r.senderName}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Modals & Drawers */}
       <DealRoomModal

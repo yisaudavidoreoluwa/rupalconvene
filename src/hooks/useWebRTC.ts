@@ -30,6 +30,9 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
   const [audioLevel, setAudioLevel] = useState<number>(0);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'offline'>('connecting');
+  const [syncedSlideIndex, setSyncedSlideIndex] = useState<number | null>(null);
+  const [laserPointer, setLaserPointer] = useState<{ x: number; y: number; visible: boolean } | null>(null);
+  const [reactions, setReactions] = useState<{ id: string; emoji: string; senderName: string }[]>([]);
 
   const localStreamRef = useRef<MediaStream | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -383,6 +386,31 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
             )
           );
         })
+        // Live Presentation Slide Synchronization
+        .on('broadcast', { event: 'presentation-slide' }, ({ payload }) => {
+          if (!mounted) return;
+          if (typeof payload?.slideIndex === 'number') {
+            setSyncedSlideIndex(payload.slideIndex);
+          }
+        })
+        // Live Presentation Laser Pointer
+        .on('broadcast', { event: 'presentation-laser' }, ({ payload }) => {
+          if (!mounted) return;
+          setLaserPointer(payload);
+        })
+        // Live Floating Emoji Reactions
+        .on('broadcast', { event: 'emoji-reaction' }, ({ payload }) => {
+          if (!mounted) return;
+          const reaction = {
+            id: payload?.id || `react-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            emoji: payload?.emoji || '👍',
+            senderName: payload?.senderName || 'Participant',
+          };
+          setReactions((prev) => [...prev, reaction]);
+          setTimeout(() => {
+            setReactions((prev) => prev.filter((r) => r.id !== reaction.id));
+          }, 3500);
+        })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
@@ -489,6 +517,50 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
     return !currentUserRef.current.isVideoOff;
   }, []);
 
+  // Broadcast Presentation Slide Change across the Room
+  const broadcastSlideChange = useCallback((slideIndex: number) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'presentation-slide',
+        payload: { slideIndex, senderId: currentUserRef.current.id },
+      });
+    }
+  }, []);
+
+  // Broadcast Presentation Laser Pointer across the Room
+  const broadcastLaser = useCallback((x: number, y: number, visible: boolean) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'presentation-laser',
+        payload: { x, y, visible, senderId: currentUserRef.current.id },
+      });
+    }
+  }, []);
+
+  // Broadcast Live Emoji Reaction across the Room
+  const broadcastReaction = useCallback((emoji: string) => {
+    const reactionId = `react-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newReaction = {
+      id: reactionId,
+      emoji,
+      senderName: currentUserRef.current.name,
+    };
+    setReactions((prev) => [...prev, newReaction]);
+    setTimeout(() => {
+      setReactions((prev) => prev.filter((r) => r.id !== reactionId));
+    }, 3500);
+
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'emoji-reaction',
+        payload: newReaction,
+      });
+    }
+  }, []);
+
   return {
     localStream,
     remoteStreams,
@@ -499,5 +571,11 @@ export function useWebRTC({ roomCode, currentUser, enabled = true }: UseWebRTCOp
     toggleMute,
     toggleVideo,
     initLocalMedia,
+    broadcastSlideChange,
+    broadcastLaser,
+    broadcastReaction,
+    syncedSlideIndex,
+    laserPointer,
+    reactions,
   };
 }

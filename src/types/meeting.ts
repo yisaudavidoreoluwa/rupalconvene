@@ -85,6 +85,10 @@ export interface PitchSlide {
   speakerNotes: string;
   codeSnippet?: string;
   diagramSnippet?: string;
+  imageUrl?: string;
+  fileUrl?: string;
+  fileType?: string;
+  fileSizeBytes?: number;
 }
 
 export interface AgendaItem {
