@@ -33,7 +33,8 @@ import {
   MeetingMinutes, 
   LiveCaption,
   RoomPermissions,
-  AccessRequest
+  AccessRequest,
+  DrawingStroke
 } from '@/types/meeting';
 
 import { 
@@ -103,6 +104,7 @@ function ConferenceApp() {
   const [files, setFiles] = useState<CodeFile[]>(INITIAL_FILES);
   const [activeFileId, setActiveFileId] = useState<string>('index-html');
   const [whiteboardElements, setWhiteboardElements] = useState<WhiteboardElement[]>(INITIAL_WHITEBOARD_ELEMENTS);
+  const [whiteboardStrokes, setWhiteboardStrokes] = useState<DrawingStroke[]>([]);
   const [slides, setSlides] = useState<PitchSlide[]>(INITIAL_SLIDES);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [agenda, setAgenda] = useState<AgendaItem[]>(INITIAL_AGENDA);
@@ -232,7 +234,18 @@ function ConferenceApp() {
   }, [currentUser.id]);
 
   const handleRemoteSlidesUpdate = useCallback((newSlides: PitchSlide[]) => {
-    setSlides(newSlides);
+    if (newSlides && Array.isArray(newSlides)) {
+      setSlides(newSlides);
+    }
+  }, []);
+
+  const handleRemoteWhiteboardUpdate = useCallback((elements: WhiteboardElement[], strokes: DrawingStroke[]) => {
+    if (elements && Array.isArray(elements)) {
+      setWhiteboardElements(elements);
+    }
+    if (strokes && Array.isArray(strokes)) {
+      setWhiteboardStrokes(strokes);
+    }
   }, []);
 
   const handleRemoteEndMeeting = useCallback((payload: { hostId: string; hostName: string; endedAt?: string }) => {
@@ -259,6 +272,7 @@ function ConferenceApp() {
     broadcastAccessRequest,
     broadcastAccessResponse,
     broadcastSlidesUpdate,
+    broadcastWhiteboardUpdate,
     broadcastEndMeeting,
     teardownMedia,
     syncedSlideIndex,
@@ -278,6 +292,7 @@ function ConferenceApp() {
     onRemoteAccessRequest: handleRemoteAccessRequest,
     onRemoteAccessResponse: handleRemoteAccessResponse,
     onRemoteSlidesUpdate: handleRemoteSlidesUpdate,
+    onRemoteWhiteboardUpdate: handleRemoteWhiteboardUpdate,
     onRemoteEndMeeting: handleRemoteEndMeeting,
   });
 
@@ -296,9 +311,20 @@ function ConferenceApp() {
   };
 
   const handleUploadSlides = (newSlides: PitchSlide[]) => {
-    setSlides(newSlides);
-    broadcastSlidesUpdate(newSlides);
+    setSlides((prev) => {
+      const updated = [...prev, ...newSlides];
+      broadcastSlidesUpdate(updated);
+      return updated;
+    });
+    handleSlideChange(slides.length);
+    showToast(`Uploaded ${newSlides.length} presentation slides and synced with meeting.`, 'success');
   };
+
+  const handleBroadcastWhiteboard = useCallback((elements: WhiteboardElement[], strokes: DrawingStroke[]) => {
+    setWhiteboardElements(elements);
+    setWhiteboardStrokes(strokes);
+    broadcastWhiteboardUpdate(elements, strokes);
+  }, [broadcastWhiteboardUpdate]);
 
   // Attach local media stream to localVideoRef element
   useEffect(() => {
@@ -780,6 +806,8 @@ function ConferenceApp() {
                 <ArchitectureWhiteboard
                   elements={whiteboardElements}
                   onUpdateElements={setWhiteboardElements}
+                  strokes={whiteboardStrokes}
+                  onUpdateStrokes={setWhiteboardStrokes}
                   isHost={isHost}
                   canDraw={isHost || roomPermissions.whiteboardDrawMode === 'everyone' || (roomPermissions.allowedWhiteboardIds?.includes(currentUser.id) ?? false)}
                   roomPermissions={roomPermissions}
@@ -789,6 +817,7 @@ function ConferenceApp() {
                   }}
                   onRequestDrawAccess={() => broadcastAccessRequest('whiteboard-draw')}
                   participants={allParticipants}
+                  onBroadcastWhiteboardUpdate={handleBroadcastWhiteboard}
                 />
               </div>
 
@@ -820,7 +849,15 @@ function ConferenceApp() {
                   isWatermarkActive={isWatermarkActive}
                   currentUser={currentUser}
                   onOpenDealRoom={() => setIsDealRoomOpen(true)}
-                  onUploadSlide={(newSlide) => setSlides((prev) => [...prev, newSlide])}
+                  onUploadSlide={(newSlide) => {
+                    setSlides((prev) => {
+                      const updated = [...prev, newSlide];
+                      broadcastSlidesUpdate(updated);
+                      return updated;
+                    });
+                    handleSlideChange(slides.length);
+                    showToast('Presentation slide uploaded and synced across meeting.', 'success');
+                  }}
                   onUploadSlides={handleUploadSlides}
                   laserPointer={laserPointer}
                   onLaserMove={broadcastLaser}

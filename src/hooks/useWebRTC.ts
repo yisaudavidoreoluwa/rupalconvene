@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Participant, ChatMessage, RoomPermissions, AccessRequest, PitchSlide } from '@/types/meeting';
+import { Participant, ChatMessage, RoomPermissions, AccessRequest, PitchSlide, WhiteboardElement, DrawingStroke } from '@/types/meeting';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -28,6 +28,7 @@ interface UseWebRTCOptions {
   onRemoteAccessRequest?: (req: AccessRequest) => void;
   onRemoteAccessResponse?: (payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw'; granted: boolean }) => void;
   onRemoteSlidesUpdate?: (slides: PitchSlide[]) => void;
+  onRemoteWhiteboardUpdate?: (elements: WhiteboardElement[], strokes: DrawingStroke[]) => void;
   onRemoteEndMeeting?: (payload: { hostId: string; hostName: string; endedAt?: string }) => void;
 }
 
@@ -42,6 +43,7 @@ export function useWebRTC({
   onRemoteAccessRequest,
   onRemoteAccessResponse,
   onRemoteSlidesUpdate,
+  onRemoteWhiteboardUpdate,
   onRemoteEndMeeting,
 }: UseWebRTCOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -72,6 +74,7 @@ export function useWebRTC({
     onRemoteAccessRequest,
     onRemoteAccessResponse,
     onRemoteSlidesUpdate,
+    onRemoteWhiteboardUpdate,
     onRemoteEndMeeting,
   });
 
@@ -84,6 +87,7 @@ export function useWebRTC({
       onRemoteAccessRequest,
       onRemoteAccessResponse,
       onRemoteSlidesUpdate,
+      onRemoteWhiteboardUpdate,
       onRemoteEndMeeting,
     };
   });
@@ -530,6 +534,13 @@ export function useWebRTC({
             callbacksRef.current.onRemoteSlidesUpdate?.(payload.slides);
           }
         })
+        // Live collaborative architectural whiteboard & typing synchronization
+        .on('broadcast', { event: 'whiteboard-update' }, ({ payload }) => {
+          if (!mounted) return;
+          if (payload && payload.senderId !== currentUserRef.current.id) {
+            callbacksRef.current.onRemoteWhiteboardUpdate?.(payload.elements || [], payload.strokes || []);
+          }
+        })
         // Host immediately terminates the conference session for everyone
         .on('broadcast', { event: 'end-meeting' }, ({ payload }) => {
           if (!mounted) return;
@@ -789,6 +800,21 @@ export function useWebRTC({
     }
   }, []);
 
+  // Broadcast Whiteboard Elements, Typed Text and Drawings across the Room
+  const broadcastWhiteboardUpdate = useCallback((elements: WhiteboardElement[], strokes: DrawingStroke[]) => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'whiteboard-update',
+        payload: {
+          elements,
+          strokes,
+          senderId: currentUserRef.current.id,
+        },
+      });
+    }
+  }, []);
+
   // Broadcast Immediate Meeting Termination by Host
   const broadcastEndMeeting = useCallback(() => {
     if (channelRef.current) {
@@ -845,6 +871,7 @@ export function useWebRTC({
     broadcastAccessRequest,
     broadcastAccessResponse,
     broadcastSlidesUpdate,
+    broadcastWhiteboardUpdate,
     broadcastEndMeeting,
     teardownMedia,
     syncedSlideIndex,

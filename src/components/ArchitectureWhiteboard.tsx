@@ -25,7 +25,11 @@ import {
   Loader2,
   X,
   Check,
-  Users
+  Users,
+  Type,
+  StickyNote,
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { WhiteboardElement, DrawingStroke, RoomPermissions, Participant } from '@/types/meeting';
 
@@ -39,6 +43,8 @@ interface ArchitectureWhiteboardProps {
   onUpdatePermissions?: (permissions: RoomPermissions) => void;
   onRequestDrawAccess?: () => void;
   participants?: Participant[];
+  strokes?: DrawingStroke[];
+  onUpdateStrokes?: (strokes: DrawingStroke[]) => void;
   onBroadcastWhiteboardUpdate?: (elements: WhiteboardElement[], strokes: DrawingStroke[]) => void;
 }
 
@@ -60,6 +66,8 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
   onUpdatePermissions,
   onRequestDrawAccess,
   participants = [],
+  strokes: parentStrokes,
+  onUpdateStrokes,
   onBroadcastWhiteboardUpdate,
 }) => {
   // Selection and drag state for nodes
@@ -69,13 +77,29 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
   const [newNodeLabel, setNewNodeLabel] = useState('');
   const [newNodeType, setNewNodeType] = useState<WhiteboardElement['type']>('service');
 
-  // Interactive Drawing Canvas State
-  const [activeTool, setActiveTool] = useState<'select' | 'pen' | 'brush' | 'arrow' | 'line' | 'rect' | 'eraser'>('select');
+  // Interactive Drawing & Typing State
+  const [activeTool, setActiveTool] = useState<'select' | 'pen' | 'brush' | 'text' | 'sticky' | 'arrow' | 'line' | 'rect' | 'eraser'>('select');
   const [strokeColor, setStrokeColor] = useState<string>('#0f172a');
   const [strokeWidth, setStrokeWidth] = useState<number>(3);
-  const [strokes, setStrokes] = useState<DrawingStroke[]>([]);
+  const [strokes, setStrokes] = useState<DrawingStroke[]>(parentStrokes || []);
   const [currentStroke, setCurrentStroke] = useState<DrawingStroke | null>(null);
   const [accessRequested, setAccessRequested] = useState(false);
+
+  // In-Place Inline Typing State (Requirement: Type on Whiteboard)
+  const [editingElementId, setEditingElementId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>('');
+
+  // Slide / Diagram Upload State (Requirement: Upload slides to whiteboard)
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const whiteboardFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Synchronize incoming remote strokes
+  useEffect(() => {
+    if (parentStrokes) {
+      setStrokes(parentStrokes);
+    }
+  }, [parentStrokes]);
 
   // Gemini AI Architecture Analysis State
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -104,6 +128,109 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
     });
   };
 
+  const handleCommitText = (id: string, overrideText?: string) => {
+    const val = (overrideText !== undefined ? overrideText : editingText).trim();
+    if (!val) {
+      const target = elements.find((el) => el.id === id);
+      if (target && !target.label) {
+        const updated = elements.filter((el) => el.id !== id);
+        onUpdateElements(updated);
+        onBroadcastWhiteboardUpdate?.(updated, strokes);
+        setEditingElementId(null);
+        setEditingText('');
+        return;
+      }
+    }
+    const updated = elements.map((el) => (el.id === id ? { ...el, label: val } : el));
+    onUpdateElements(updated);
+    onBroadcastWhiteboardUpdate?.(updated, strokes);
+    setEditingElementId(null);
+    setEditingText('');
+  };
+
+  const handleElementDoubleClick = (el: WhiteboardElement) => {
+    if (!userCanDraw) return;
+    setEditingElementId(el.id);
+    setEditingText(el.label);
+  };
+
+  const processWhiteboardFile = async (file: File, clientX?: number, clientY?: number) => {
+    if (!canvasRef.current || !userCanDraw) return;
+    setIsUploadingFile(true);
+    try {
+      const bounds = canvasRef.current.getBoundingClientRect();
+      let x = clientX !== undefined ? clientX - bounds.left : bounds.width / 2 - 130;
+      let y = clientY !== undefined ? clientY - bounds.top : bounds.height / 2 - 90;
+      x = Math.max(10, Math.min(bounds.width - 270, x));
+      y = Math.max(10, Math.min(bounds.height - 190, y));
+
+      const isImage = file.type.startsWith('image/');
+
+      if (isImage) {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read image file'));
+          reader.readAsDataURL(file);
+        });
+
+        const newElement: WhiteboardElement = {
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          type: 'image',
+          x: Math.round(x),
+          y: Math.round(y),
+          width: 260,
+          height: 180,
+          label: file.name,
+          color: '#0f172a',
+          imageUrl: dataUrl,
+        };
+
+        const updated = [...elements, newElement];
+        onUpdateElements(updated);
+        onBroadcastWhiteboardUpdate?.(updated, strokes);
+      } else {
+        // PDF or document slide preview
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read document'));
+          reader.readAsDataURL(file);
+        });
+
+        const newElement: WhiteboardElement = {
+          id: `slide-doc-${Date.now()}`,
+          type: 'image',
+          x: Math.round(x),
+          y: Math.round(y),
+          width: 280,
+          height: 190,
+          label: file.name,
+          color: '#0f172a',
+          imageUrl: dataUrl,
+        };
+
+        const updated = [...elements, newElement];
+        onUpdateElements(updated);
+        onBroadcastWhiteboardUpdate?.(updated, strokes);
+      }
+    } catch (err) {
+      console.error('Failed to process whiteboard file:', err);
+    } finally {
+      setIsUploadingFile(false);
+    }
+  };
+
+  const handleWhiteboardFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processWhiteboardFile(file);
+    }
+    if (whiteboardFileInputRef.current) {
+      whiteboardFileInputRef.current.value = '';
+    }
+  };
+
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!userCanDraw) return;
     if (activeTool === 'select' || activeTool === 'eraser') return;
@@ -112,6 +239,49 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
     const bounds = canvasRef.current.getBoundingClientRect();
     const x = e.clientX - bounds.left;
     const y = e.clientY - bounds.top;
+
+    // Direct Typing on Whiteboard (Requirement: allow users to type on whiteboard)
+    if (activeTool === 'text') {
+      const newId = `text-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const newElement: WhiteboardElement = {
+        id: newId,
+        type: 'text',
+        x: Math.max(10, Math.min(bounds.width - 200, Math.round(x))),
+        y: Math.max(10, Math.min(bounds.height - 60, Math.round(y))),
+        width: 190,
+        height: 50,
+        label: '',
+        color: strokeColor,
+      };
+      const updated = [...elements, newElement];
+      onUpdateElements(updated);
+      setSelectedElementId(newId);
+      setEditingElementId(newId);
+      setEditingText('');
+      return;
+    }
+
+    // Direct Sticky Note on Whiteboard
+    if (activeTool === 'sticky') {
+      const newId = `sticky-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const newElement: WhiteboardElement = {
+        id: newId,
+        type: 'sticky',
+        x: Math.max(10, Math.min(bounds.width - 170, Math.round(x))),
+        y: Math.max(10, Math.min(bounds.height - 130, Math.round(y))),
+        width: 160,
+        height: 120,
+        label: '',
+        color: strokeColor,
+        fillColor: '#fef3c7',
+      };
+      const updated = [...elements, newElement];
+      onUpdateElements(updated);
+      setSelectedElementId(newId);
+      setEditingElementId(newId);
+      setEditingText('');
+      return;
+    }
 
     const newStroke: DrawingStroke = {
       id: `stroke-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -164,6 +334,7 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
       const updated = [...strokes, currentStroke];
       setStrokes(updated);
       setCurrentStroke(null);
+      onUpdateStrokes?.(updated);
       onBroadcastWhiteboardUpdate?.(elements, updated);
     }
   };
@@ -172,11 +343,13 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
     if (strokes.length === 0) return;
     const updated = strokes.slice(0, -1);
     setStrokes(updated);
+    onUpdateStrokes?.(updated);
     onBroadcastWhiteboardUpdate?.(elements, updated);
   };
 
   const handleClearDrawings = () => {
     setStrokes([]);
+    onUpdateStrokes?.([]);
     onBroadcastWhiteboardUpdate?.(elements, []);
   };
 
@@ -333,6 +506,12 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
         return <Layers className="w-4 h-4" />;
       case 'circle':
         return <Circle className="w-4 h-4" />;
+      case 'sticky':
+        return <StickyNote className="w-4 h-4 text-amber-500" />;
+      case 'text':
+        return <Type className="w-4 h-4 text-blue-500" />;
+      case 'image':
+        return <ImageIcon className="w-4 h-4 text-emerald-500" />;
       default:
         return <Square className="w-4 h-4" />;
     }
@@ -441,6 +620,24 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                   <Move className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  onClick={() => setActiveTool('text')}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    activeTool === 'text' ? 'bg-white text-blue-600 shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+                  }`}
+                  title="Type Text directly on Whiteboard"
+                >
+                  <Type className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('sticky')}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    activeTool === 'sticky' ? 'bg-white text-amber-600 shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+                  }`}
+                  title="Sticky Note (Click on canvas to type note)"
+                >
+                  <StickyNote className="w-3.5 h-3.5" />
+                </button>
+                <button
                   onClick={() => setActiveTool('pen')}
                   className={`p-1.5 rounded-lg transition-colors ${
                     activeTool === 'pen' ? 'bg-white text-[#0f172a] shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
@@ -502,7 +699,7 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                 ))}
               </div>
 
-              {/* Node Input */}
+              {/* Node Input & Slide Upload */}
               <div className="hidden sm:flex items-center space-x-1.5 pl-2">
                 <select
                   value={newNodeType}
@@ -514,6 +711,7 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                   <option value="database">Database</option>
                   <option value="rect">Worker</option>
                   <option value="sticky">Sticky Note</option>
+                  <option value="text">Text Box</option>
                 </select>
 
                 <input
@@ -522,7 +720,7 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                   value={newNodeLabel}
                   onChange={(e) => setNewNodeLabel(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddNode()}
-                  className="bg-slate-50 text-xs text-[#0f172a] rounded-lg px-2.5 py-1.5 w-32 md:w-44 focus:outline-none shadow-2xs"
+                  className="bg-slate-50 text-xs text-[#0f172a] rounded-lg px-2.5 py-1.5 w-28 md:w-36 focus:outline-none shadow-2xs"
                 />
 
                 <button
@@ -531,6 +729,24 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                 >
                   <Plus className="w-3 h-3" />
                   <span className="hidden xl:inline">Add</span>
+                </button>
+
+                {/* Upload Slide / Diagram on Whiteboard */}
+                <input
+                  type="file"
+                  ref={whiteboardFileInputRef}
+                  onChange={handleWhiteboardFileInputChange}
+                  accept="image/*,.pdf"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => whiteboardFileInputRef.current?.click()}
+                  disabled={isUploadingFile}
+                  className="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all shadow-2xs"
+                  title="Upload Slide or Diagram Image to Whiteboard"
+                >
+                  <Upload className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="hidden xl:inline">{isUploadingFile ? 'Uploading...' : 'Upload Slide'}</span>
                 </button>
               </div>
 
@@ -623,13 +839,35 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onDragOver={(e) => {
+          if (userCanDraw) {
+            e.preventDefault();
+            setIsDraggingFile(true);
+          }
+        }}
+        onDragLeave={() => setIsDraggingFile(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDraggingFile(false);
+          const f = e.dataTransfer.files?.[0];
+          if (f) processWhiteboardFile(f, e.clientX, e.clientY);
+        }}
         onClick={() => {
           if (activeTool === 'select') setSelectedElementId(null);
         }}
         className={`flex-1 relative overflow-hidden bg-white bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:24px_24px] ${
-          !userCanDraw ? 'cursor-default' : activeTool === 'select' ? 'cursor-default' : 'cursor-crosshair'
+          !userCanDraw ? 'cursor-default' : activeTool === 'select' ? 'cursor-default' : activeTool === 'text' ? 'cursor-text' : 'cursor-crosshair'
         }`}
       >
+        {/* Drag & Drop File Upload Overlay */}
+        {isDraggingFile && (
+          <div className="absolute inset-0 z-50 bg-[#0f172a]/75 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-white border-2 border-dashed border-blue-400 rounded-3xl pointer-events-none">
+            <Upload className="w-10 h-10 text-blue-400 animate-bounce mb-2" />
+            <h3 className="text-base font-bold">Drop Slide or Diagram Image Here</h3>
+            <p className="text-xs text-slate-300 mt-1">Embeds and synchronizes across the meeting whiteboard</p>
+          </div>
+        )}
+
         {/* SVG Overlay for Freehand Strokes and Connectors */}
         <svg
           ref={svgRef}
@@ -688,7 +926,7 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
             </div>
             <h3 className="text-sm font-bold text-[#0f172a]">Architecture Canvas Ready</h3>
             <p className="text-xs text-slate-400 max-w-sm mt-1 leading-relaxed">
-              Use the pen, arrows, and shapes to map out microservices or click below to load a cloud stencil.
+              Use the text tool to type directly, pen to sketch, drop slide images, or load a starter cloud stencil.
             </p>
             {userCanDraw && (
               <button
@@ -701,30 +939,44 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
           </div>
         )}
 
-        {/* Draggable Architecture Nodes */}
+        {/* Draggable Architecture Nodes, Typed Text, Sticky Notes & Uploaded Slides */}
         {elements.map((el) => {
           const isSelected = el.id === selectedElementId;
           const isSticky = el.type === 'sticky';
+          const isText = el.type === 'text';
+          const isImage = el.type === 'image';
+          const isEditing = editingElementId === el.id;
+
           return (
             <div
               key={el.id}
               onMouseDown={(e) => handleNodeMouseDown(e, el)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                handleElementDoubleClick(el);
+              }}
               style={{
                 left: `${el.x}px`,
                 top: `${el.y}px`,
-                width: `${el.width}px`,
+                width: isText ? (isEditing ? '240px' : `${Math.max(el.width, 160)}px`) : `${el.width}px`,
+                minHeight: isText ? '40px' : isSticky ? '120px' : isImage ? '180px' : '75px',
               }}
-              className={`absolute p-3 rounded-2xl transition-all shadow-md ${
-                isSticky
+              className={`absolute p-3 rounded-2xl transition-all shadow-md select-text ${
+                isText
+                  ? 'bg-white/95 text-slate-900 border border-slate-200/90 shadow-sm backdrop-blur-xs'
+                  : isSticky
                   ? 'bg-amber-50 text-amber-950 border border-amber-200 shadow-amber-100'
+                  : isImage
+                  ? 'bg-slate-900 text-white border border-slate-800 overflow-hidden'
                   : 'bg-[#0f172a] text-white'
               } ${
                 userCanDraw && activeTool === 'select' ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
               } ${
-                isSelected ? 'ring-2 ring-blue-500 scale-105 z-30' : 'hover:scale-[1.02] z-20'
+                isSelected ? 'ring-2 ring-blue-500 scale-105 z-30' : 'hover:scale-[1.01] z-20'
               }`}
             >
-              <div className="flex items-center justify-between text-xs font-bold mb-1 opacity-80">
+              {/* Header Label / Type Badge */}
+              <div className="flex items-center justify-between text-xs font-bold mb-1 opacity-80 select-none">
                 <div className="flex items-center space-x-1.5">
                   {getNodeIcon(el.type)}
                   <span className="uppercase text-[9px] tracking-wider font-extrabold">{el.type}</span>
@@ -733,9 +985,102 @@ export const ArchitectureWhiteboard: React.FC<ArchitectureWhiteboardProps> = ({
                   <Move className="w-3 h-3 opacity-50" />
                 )}
               </div>
-              <div className="text-xs font-bold leading-snug line-clamp-2">
-                {el.label}
-              </div>
+
+              {/* Element Content: Interactive Typing & Slides Rendering */}
+              {isImage ? (
+                <div className="w-full flex flex-col space-y-1">
+                  <div className="w-full h-32 rounded-lg overflow-hidden bg-slate-950 flex items-center justify-center">
+                    {el.imageUrl ? (
+                      <img
+                        src={el.imageUrl}
+                        alt={el.label}
+                        className="w-full h-full object-contain pointer-events-none select-none"
+                      />
+                    ) : (
+                      <span className="text-xs text-slate-400">Slide Preview</span>
+                    )}
+                  </div>
+                  <div className="text-[11px] font-semibold text-slate-300 truncate pt-1">
+                    {el.label}
+                  </div>
+                </div>
+              ) : isText ? (
+                <div className="w-full">
+                  {isEditing ? (
+                    <textarea
+                      autoFocus
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onBlur={() => handleCommitText(el.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleCommitText(el.id);
+                        }
+                        if (e.key === 'Escape') setEditingElementId(null);
+                      }}
+                      className="w-full bg-slate-50 text-[#0f172a] text-xs sm:text-sm font-semibold border-2 border-blue-500 rounded-lg p-1.5 focus:outline-none resize-none shadow-sm"
+                      placeholder="Type text here..."
+                      rows={2}
+                    />
+                  ) : (
+                    <div 
+                      className="text-xs sm:text-sm font-bold text-[#0f172a] whitespace-pre-wrap break-words leading-relaxed cursor-text"
+                      title="Double-click to edit text"
+                    >
+                      {el.label || 'Double-click to type text...'}
+                    </div>
+                  )}
+                </div>
+              ) : isSticky ? (
+                <div className="w-full h-full">
+                  {isEditing ? (
+                    <textarea
+                      autoFocus
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onBlur={() => handleCommitText(el.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') setEditingElementId(null);
+                      }}
+                      className="w-full h-24 bg-transparent text-xs font-semibold text-amber-950 p-1 resize-none focus:outline-none border-b border-amber-300"
+                      placeholder="Type sticky note..."
+                      rows={4}
+                    />
+                  ) : (
+                    <div 
+                      className="text-xs font-semibold text-amber-950 whitespace-pre-wrap break-words leading-relaxed cursor-text"
+                      title="Double-click to edit sticky note"
+                    >
+                      {el.label || 'Double-click to type note...'}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {isEditing ? (
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                      onBlur={() => handleCommitText(el.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleCommitText(el.id);
+                        if (e.key === 'Escape') setEditingElementId(null);
+                      }}
+                      className="w-full bg-white/20 text-white text-xs font-bold rounded px-1.5 py-0.5 focus:outline-none border border-white/40"
+                    />
+                  ) : (
+                    <div 
+                      className="text-xs font-bold leading-snug line-clamp-2 cursor-text"
+                      title="Double-click to rename node"
+                    >
+                      {el.label}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}

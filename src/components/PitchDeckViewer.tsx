@@ -191,7 +191,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
           const context = offscreenCanvas.getContext('2d');
 
           await page.render({ canvasContext: context, viewport }).promise;
-          const pageDataUrl = offscreenCanvas.toDataURL('image/png');
+          const pageDataUrl = offscreenCanvas.toDataURL('image/jpeg', 0.88);
 
           // Extract text for slide metadata / notes if available
           let bulletPoints = [
@@ -243,17 +243,22 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
         setTimeout(() => setUploadStatus(null), 3500);
 
       } else {
-        // Standard Image Slide Upload
+        // Standard Image Slide Upload - Read as Data URL so all remote participants can view it
         setUploadStatus(`Uploading image slide ${file.name}...`);
-        const localPreviewUrl = URL.createObjectURL(file);
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('Failed to read image file'));
+          reader.readAsDataURL(file);
+        });
 
         const newSlide: PitchSlide = {
           id: Date.now(),
           title: file.name.replace(/\.[^/.]+$/, ''),
           category: isImage ? 'Visual Deck Slide' : 'Document Artifact',
           subtitle: `Uploaded by ${currentUser.name} • ${(file.size / 1024).toFixed(1)} KB`,
-          imageUrl: localPreviewUrl,
-          fileUrl: localPreviewUrl,
+          imageUrl: dataUrl,
+          fileUrl: dataUrl,
           fileType: file.type,
           fileSizeBytes: file.size,
           bulletPoints: [

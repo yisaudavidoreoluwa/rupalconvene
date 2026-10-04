@@ -70,7 +70,7 @@ export interface TerminalLog {
 
 export interface WhiteboardElement {
   id: string;
-  type: 'rect' | 'circle' | 'cloud' | 'database' | 'service' | 'arrow' | 'text' | 'sticky';
+  type: 'rect' | 'circle' | 'cloud' | 'database' | 'service' | 'arrow' | 'text' | 'sticky' | 'image';
   x: number;
   y: number;
   width: number;
@@ -79,6 +79,7 @@ export interface WhiteboardElement {
   color: string;
   fillColor?: string;
   toElementId?: string;
+  imageUrl?: string;
 }
 
 export interface SlideMetric {
