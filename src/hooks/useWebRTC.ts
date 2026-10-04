@@ -26,8 +26,9 @@ interface UseWebRTCOptions {
   onRemoteUpvote?: (messageId: string) => void;
   onRemotePermissions?: (permissions: RoomPermissions) => void;
   onRemoteAccessRequest?: (req: AccessRequest) => void;
-  onRemoteAccessResponse?: (payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck'; granted: boolean }) => void;
+  onRemoteAccessResponse?: (payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw'; granted: boolean }) => void;
   onRemoteSlidesUpdate?: (slides: PitchSlide[]) => void;
+  onRemoteEndMeeting?: (payload: { hostId: string; hostName: string; endedAt?: string }) => void;
 }
 
 export function useWebRTC({ 
@@ -41,6 +42,7 @@ export function useWebRTC({
   onRemoteAccessRequest,
   onRemoteAccessResponse,
   onRemoteSlidesUpdate,
+  onRemoteEndMeeting,
 }: UseWebRTCOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
@@ -70,6 +72,7 @@ export function useWebRTC({
     onRemoteAccessRequest,
     onRemoteAccessResponse,
     onRemoteSlidesUpdate,
+    onRemoteEndMeeting,
   });
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export function useWebRTC({
       onRemoteAccessRequest,
       onRemoteAccessResponse,
       onRemoteSlidesUpdate,
+      onRemoteEndMeeting,
     };
   });
 
@@ -526,6 +530,18 @@ export function useWebRTC({
             callbacksRef.current.onRemoteSlidesUpdate?.(payload.slides);
           }
         })
+        // Host immediately terminates the conference session for everyone
+        .on('broadcast', { event: 'end-meeting' }, ({ payload }) => {
+          if (!mounted) return;
+          if (localStreamRef.current) {
+            localStreamRef.current.getTracks().forEach((track) => track.stop());
+            localStreamRef.current = null;
+          }
+          setLocalStream(null);
+          peerConnectionsRef.current.forEach((pc) => pc.close());
+          peerConnectionsRef.current.clear();
+          callbacksRef.current.onRemoteEndMeeting?.(payload);
+        })
         .subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
@@ -733,7 +749,7 @@ export function useWebRTC({
   }, []);
 
   // Broadcast Access Request from Attendee to Host
-  const broadcastAccessRequest = useCallback((type: 'code-edit' | 'hands-on-deck') => {
+  const broadcastAccessRequest = useCallback((type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw') => {
     const req: AccessRequest = {
       id: `req-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
       type,
@@ -752,7 +768,7 @@ export function useWebRTC({
   }, []);
 
   // Broadcast Host Response to Access Request
-  const broadcastAccessResponse = useCallback((requestId: string, targetUserId: string, type: 'code-edit' | 'hands-on-deck', granted: boolean) => {
+  const broadcastAccessResponse = useCallback((requestId: string, targetUserId: string, type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw', granted: boolean) => {
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
@@ -771,6 +787,42 @@ export function useWebRTC({
         payload: { slides, senderId: currentUserRef.current.id },
       });
     }
+  }, []);
+
+  // Broadcast Immediate Meeting Termination by Host
+  const broadcastEndMeeting = useCallback(() => {
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'end-meeting',
+        payload: {
+          hostId: currentUserRef.current.id,
+          hostName: currentUserRef.current.name,
+          endedAt: new Date().toISOString(),
+        },
+      });
+    }
+  }, []);
+
+  // Teardown all local audio/video media tracks and close peer connections
+  const teardownMedia = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+    }
+    peerConnectionsRef.current.forEach((pc) => pc.close());
+    peerConnectionsRef.current.clear();
+    iceCandidatesQueueRef.current.clear();
+    remoteStreamsRef.current.clear();
+    setRemoteStreams(new Map());
+    setRemoteParticipants([]);
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+    setLocalStream(null);
   }, []);
 
   return {
@@ -793,6 +845,8 @@ export function useWebRTC({
     broadcastAccessRequest,
     broadcastAccessResponse,
     broadcastSlidesUpdate,
+    broadcastEndMeeting,
+    teardownMedia,
     syncedSlideIndex,
     laserPointer,
     reactions,

@@ -324,7 +324,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
 
   return (
     <div 
-      className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs relative select-none"
+      className="w-full h-full flex flex-col bg-white rounded-3xl overflow-hidden shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)] relative select-none"
       onDragOver={(e) => { 
         if (hasDeckControl) {
           e.preventDefault(); 
@@ -358,7 +358,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
       )}
 
       {/* Top Presentation Action Bar */}
-      <div className="h-12 bg-white border-b border-slate-100 px-3 sm:px-4 flex items-center justify-between z-20 flex-shrink-0">
+      <div className="h-12 bg-white px-3 sm:px-4 flex items-center justify-between z-20 flex-shrink-0 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
           <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0f172a] text-white whitespace-nowrap">
             {slide?.category || 'Presentation'}

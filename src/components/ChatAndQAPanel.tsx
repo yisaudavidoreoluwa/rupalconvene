@@ -57,9 +57,9 @@ export const ChatAndQAPanel: React.FC<ChatAndQAPanelProps> = ({
   });
 
   return (
-    <div className="w-80 sm:w-96 h-full flex flex-col bg-white border-l border-slate-100 shadow-lg z-20 select-none">
+    <div className="w-80 sm:w-96 h-full flex flex-col bg-white shadow-[-4px_0_25px_-5px_rgba(0,0,0,0.04)] z-20 select-none">
       {/* Panel Header */}
-      <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between">
+      <div className="h-14 bg-white px-4 flex items-center justify-between shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center space-x-1 bg-slate-100 p-0.5 rounded-xl text-xs font-semibold">
           <button
             onClick={() => setActiveTab('chat')}
@@ -229,14 +229,14 @@ export const ChatAndQAPanel: React.FC<ChatAndQAPanelProps> = ({
           {/* Input Form */}
           <form
             onSubmit={handleSubmit}
-            className="p-3 bg-white border-t border-slate-200 flex items-center space-x-2"
+            className="p-3 bg-white shadow-[0_-2px_12px_-3px_rgba(0,0,0,0.04)] flex items-center space-x-2"
           >
             <input
               type="text"
               placeholder={activeTab === 'qa' ? 'Ask an investor or tech question...' : 'Send message to meeting...'}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="flex-1 bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-[#0f172a] placeholder-slate-400 focus:outline-none focus:border-[#0f172a]"
+              className="flex-1 bg-slate-100 rounded-xl px-3 py-2 text-xs text-[#0f172a] placeholder-slate-400 focus:outline-none shadow-2xs"
             />
             <button
               type="submit"

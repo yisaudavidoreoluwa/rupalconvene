@@ -90,10 +90,10 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           onClick={() => setShowMobileTools(false)}
         >
           <div 
-            className="bg-white rounded-t-3xl p-5 border-t border-slate-100 shadow-2xl space-y-4 animate-in slide-in-from-bottom duration-200"
+            className="bg-white rounded-t-3xl p-5 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] space-y-4 animate-in slide-in-from-bottom duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between pb-3">
               <span className="text-sm font-bold text-[#0f172a]">Workspace Suite Tools</span>
               <button 
                 onClick={() => setShowMobileTools(false)}
@@ -185,16 +185,12 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
       )}
 
       {/* Main Floating / Bottom Control Dock */}
-      <div className="h-16 sm:h-20 bg-white border-t border-slate-100 px-3 sm:px-6 flex items-center justify-between z-30 select-none shadow-xs w-full relative">
-        {/* Left: Meeting Time & Room Identifier */}
-        <div className="hidden lg:flex items-center space-x-3 text-sm font-semibold text-[#0f172a]">
-          <span className="font-mono text-xs text-slate-500">{currentTime}</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-xs font-bold text-[#0f172a]">{roomCode}</span>
-          <div className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-emerald-50 text-[10px] text-emerald-700 font-bold">
-            <ShieldCheck className="w-3 h-3 text-emerald-600" />
-            <span>256-Bit E2EE</span>
-          </div>
+      <div className="h-16 sm:h-20 bg-white px-3 sm:px-6 flex items-center justify-between z-30 select-none shadow-[0_-4px_25px_-5px_rgba(0,0,0,0.03)] w-full relative">
+        {/* Left: Discreet Session Indicator */}
+        <div className="hidden lg:flex items-center space-x-2 text-xs font-medium text-slate-500">
+          <span className="font-mono text-[11px] text-slate-400">{currentTime}</span>
+          <span className="text-slate-200">•</span>
+          <span className="text-slate-600 font-semibold">{roomCode}</span>
         </div>
 
         {/* Center: Essential Controls (Mic, Video, Screen, Tools, End) */}

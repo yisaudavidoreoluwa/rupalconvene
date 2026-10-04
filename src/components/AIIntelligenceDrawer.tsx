@@ -130,9 +130,9 @@ ${minutes.investorHighlights.map((i) => `- ${i}`).join('\n')}
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none">
+    <div className="w-full h-full flex flex-col bg-white rounded-3xl overflow-hidden shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)] select-none">
       {/* Drawer Top Navigation */}
-      <div className="h-14 bg-white border-b border-slate-100 px-4 flex items-center justify-between">
+      <div className="h-14 bg-white px-4 flex items-center justify-between shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
         <div className="flex items-center space-x-2">
           <div className="p-1 rounded-lg bg-blue-50 text-blue-700">
             <Sparkles className="w-4 h-4 text-blue-600 animate-pulse" />

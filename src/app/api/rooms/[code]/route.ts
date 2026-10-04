@@ -3,7 +3,8 @@ import {
   dbGetRoomByCode, 
   dbGetParticipants, 
   dbGetMessages, 
-  dbGetCodeFiles 
+  dbGetCodeFiles,
+  dbUpdateRoomStatus
 } from '@/lib/db';
 
 export async function GET(
@@ -27,6 +28,8 @@ export async function GET(
       inviteQuery === roomInviteCode
     );
 
+    const isEnded = room.status === 'ended';
+
     const participants = await dbGetParticipants(room.id);
     const messages = await dbGetMessages(room.id);
     const codeFiles = await dbGetCodeFiles(room.id);
@@ -36,6 +39,8 @@ export async function GET(
     return NextResponse.json({
       success: true,
       room,
+      isEnded,
+      status: room.status,
       isInviteOnly,
       isInviteValid,
       inviteCode: room.inviteCode,
@@ -55,5 +60,20 @@ export async function GET(
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error fetching room' }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ code: string }> }
+) {
+  try {
+    const { code } = await params;
+    const body = await req.json().catch(() => ({}));
+    const status = body?.status || 'ended';
+    const result = await dbUpdateRoomStatus(code, status);
+    return NextResponse.json({ ...result });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Error updating room status' }, { status: 500 });
   }
 }

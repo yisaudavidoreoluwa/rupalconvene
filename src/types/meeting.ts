@@ -191,16 +191,26 @@ export interface MeetingSession {
   activeLayout: StageLayout;
 }
 
+export interface DrawingStroke {
+  id: string;
+  tool: 'pen' | 'brush' | 'line' | 'arrow' | 'rect';
+  points: { x: number; y: number }[];
+  color: string;
+  size: number;
+}
+
 export interface RoomPermissions {
   codeEditMode: 'host-only' | 'everyone' | 'selected';
   allowedEditorIds: string[];
   handsOnDeck: boolean;
   allowedPresenterIds: string[];
+  whiteboardDrawMode?: 'host-only' | 'everyone' | 'selected';
+  allowedWhiteboardIds?: string[];
 }
 
 export interface AccessRequest {
   id: string;
-  type: 'code-edit' | 'hands-on-deck';
+  type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw';
   userId: string;
   userName: string;
   timestamp: string;

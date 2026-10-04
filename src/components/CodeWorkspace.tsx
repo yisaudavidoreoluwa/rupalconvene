@@ -398,11 +398,11 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   const previewBundle = buildHypertextPreviewBundle(files, activeFile);
 
   return (
-    <div className={`w-full h-full flex flex-col bg-white border border-slate-100 rounded-3xl overflow-hidden shadow-xs select-none transition-all duration-200 ${
+    <div className={`w-full h-full flex flex-col bg-white rounded-3xl overflow-hidden shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)] select-none transition-all duration-200 ${
       isFullscreen ? 'fixed inset-2 z-50 rounded-2xl shadow-2xl' : 'relative'
     }`}>
       {/* 1. Top Navigation & Action Toolbar */}
-      <div className="h-12 bg-white border-b border-slate-100 px-3 flex items-center justify-between gap-2 overflow-x-auto flex-shrink-0 z-20">
+      <div className="h-12 bg-white px-3 flex items-center justify-between gap-2 overflow-x-auto flex-shrink-0 z-20 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
         {/* Left: Tab list with File Language Icons */}
         <div className="flex items-center space-x-1.5 overflow-x-auto py-1 flex-1 min-w-0">
           {files.map((file) => {

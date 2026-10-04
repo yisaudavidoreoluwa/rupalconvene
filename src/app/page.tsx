@@ -206,9 +206,9 @@ function ConferenceApp() {
     setIncomingAccessRequest(req);
   }, []);
 
-  const handleRemoteAccessResponse = useCallback((payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck'; granted: boolean }) => {
+  const handleRemoteAccessResponse = useCallback((payload: { requestId: string; targetUserId: string; type: 'code-edit' | 'hands-on-deck' | 'whiteboard-draw'; granted: boolean }) => {
     if (payload.targetUserId === currentUser.id) {
-      const typeLabel = payload.type === 'code-edit' ? 'Code Editor' : 'Hands on Deck';
+      const typeLabel = payload.type === 'code-edit' ? 'Code Editor' : payload.type === 'whiteboard-draw' ? 'Whiteboard Drawing' : 'Hands on Deck';
       setCaptions((prev) => [
         ...prev,
         {
@@ -225,6 +225,11 @@ function ConferenceApp() {
 
   const handleRemoteSlidesUpdate = useCallback((newSlides: PitchSlide[]) => {
     setSlides(newSlides);
+  }, []);
+
+  const handleRemoteEndMeeting = useCallback((payload: { hostId: string; hostName: string; endedAt?: string }) => {
+    alert(`The meeting session was ended by the host (${payload?.hostName || 'Host'}). All participants have been returned to the lobby.`);
+    setInLobby(true);
   }, []);
 
   // Real-time WebRTC Mesh & Supabase Realtime Signaling Hook
@@ -246,6 +251,8 @@ function ConferenceApp() {
     broadcastAccessRequest,
     broadcastAccessResponse,
     broadcastSlidesUpdate,
+    broadcastEndMeeting,
+    teardownMedia,
     syncedSlideIndex,
     laserPointer,
     reactions,
@@ -263,6 +270,7 @@ function ConferenceApp() {
     onRemoteAccessRequest: handleRemoteAccessRequest,
     onRemoteAccessResponse: handleRemoteAccessResponse,
     onRemoteSlidesUpdate: handleRemoteSlidesUpdate,
+    onRemoteEndMeeting: handleRemoteEndMeeting,
   });
 
   // Synchronize slide changes across all devices in the room
@@ -591,7 +599,13 @@ function ConferenceApp() {
             <span>Attendee Permission Request</span>
           </div>
           <p className="text-xs text-slate-200 leading-relaxed">
-            <span className="font-bold text-white">{incomingAccessRequest.userName}</span> requested {incomingAccessRequest.type === 'code-edit' ? 'Code Editor write access' : 'Hands on Deck presentation control'}.
+            <span className="font-bold text-white">{incomingAccessRequest.userName}</span> requested {
+              incomingAccessRequest.type === 'code-edit' 
+                ? 'Code Editor write access' 
+                : incomingAccessRequest.type === 'whiteboard-draw'
+                ? 'Whiteboard Drawing access'
+                : 'Hands on Deck presentation control'
+            }.
           </p>
           <div className="flex items-center justify-end space-x-2 mt-3">
             <button
@@ -610,6 +624,14 @@ function ConferenceApp() {
                     ...roomPermissions,
                     codeEditMode: 'selected',
                     allowedEditorIds: Array.from(new Set([...roomPermissions.allowedEditorIds, incomingAccessRequest.userId])),
+                  };
+                  setRoomPermissions(updated);
+                  broadcastPermissions(updated);
+                } else if (incomingAccessRequest.type === 'whiteboard-draw') {
+                  const updated: RoomPermissions = {
+                    ...roomPermissions,
+                    whiteboardDrawMode: 'selected',
+                    allowedWhiteboardIds: Array.from(new Set([...(roomPermissions.allowedWhiteboardIds || []), incomingAccessRequest.userId])),
                   };
                   setRoomPermissions(updated);
                   broadcastPermissions(updated);
@@ -702,7 +724,15 @@ function ConferenceApp() {
                 <ArchitectureWhiteboard
                   elements={whiteboardElements}
                   onUpdateElements={setWhiteboardElements}
-                  onAskAIAboutArchitecture={() => setActiveTab('ai-intelligence')}
+                  isHost={isHost}
+                  canDraw={isHost || roomPermissions.whiteboardDrawMode === 'everyone' || (roomPermissions.allowedWhiteboardIds?.includes(currentUser.id) ?? false)}
+                  roomPermissions={roomPermissions}
+                  onUpdatePermissions={(newPerms) => {
+                    setRoomPermissions(newPerms);
+                    broadcastPermissions(newPerms);
+                  }}
+                  onRequestDrawAccess={() => broadcastAccessRequest('whiteboard-draw')}
+                  participants={allParticipants}
                 />
               </div>
 
@@ -865,10 +895,27 @@ function ConferenceApp() {
       <LeaveModal
         isOpen={isLeaveOpen}
         onClose={() => setIsLeaveOpen(false)}
-        onConfirmLeave={() => setInLobby(true)}
-        onEndMeetingForAll={() => {
-          alert('Conference ended by Host. Executive minutes dispatched to all partner emails.');
+        isHost={isHost}
+        onConfirmLeave={() => {
+          teardownMedia();
           setInLobby(true);
+          setIsLeaveOpen(false);
+        }}
+        onEndMeetingForAll={async () => {
+          broadcastEndMeeting();
+          try {
+            await fetch(`/api/rooms/${roomCode}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'ended' }),
+            });
+          } catch (e) {
+            console.warn('Failed to update room status:', e);
+          }
+          teardownMedia();
+          alert('Meeting ended for everyone. All participants have been returned to lobby.');
+          setInLobby(true);
+          setIsLeaveOpen(false);
         }}
       />
 

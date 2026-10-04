@@ -530,6 +530,36 @@ export async function dbGetRecentRooms(limit = 10) {
   }));
 }
 
+export async function dbUpdateRoomStatus(code: string, status: string = 'ended') {
+  const now = new Date().toISOString();
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    try {
+      await supabase
+        .from('rooms')
+        .update({ 
+          status, 
+          ended_at: status === 'ended' ? now : null 
+        })
+        .eq('room_code', code);
+    } catch (e) {
+      console.warn('Supabase update room error:', e);
+    }
+  }
+
+  const db = getDb();
+  if (db) {
+    try {
+      const stmt = db.prepare('UPDATE rooms SET status = ?, ended_at = ? WHERE room_code = ?');
+      stmt.run(status, status === 'ended' ? now : null, code);
+    } catch (err) {
+      console.warn('SQLite update room status error:', err);
+    }
+  }
+
+  return { success: true, roomCode: code, status, endedAt: status === 'ended' ? now : null };
+}
+
 // -------------------------------------------------------------
 // PARTICIPANT HELPERS
 // -------------------------------------------------------------

@@ -49,7 +49,8 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   onBackToPortal,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(1485); // 24m 45s
+  // Meeting timer starts at 00:00 when the meeting begins
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,13 +83,13 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
 
   return (
-    <header className="h-14 px-3 sm:px-5 bg-white border-b border-slate-100 flex items-center justify-between select-none relative z-30 shadow-xs">
+    <header className="h-14 px-3 sm:px-5 bg-white flex items-center justify-between select-none relative z-30 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)]">
       {/* Left: Branding & Session Room Info */}
       <div className="flex items-center space-x-2.5 sm:space-x-3.5 min-w-0">
         {onBackToPortal && (
           <button
             onClick={onBackToPortal}
-            className="p-1.5 rounded-xl text-slate-500 hover:text-[#0f172a] hover:bg-slate-100 transition-colors touch-manipulation flex-shrink-0"
+            className="p-1.5 rounded-xl text-slate-500 hover:text-[#0f172a] hover:bg-slate-50 transition-colors touch-manipulation flex-shrink-0"
             title="Return to Pre-Join Lobby"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -105,16 +106,13 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
             <span className="font-extrabold text-sm sm:text-base tracking-tight text-[#0f172a] whitespace-nowrap hidden xs:inline">
               Rupal Convene
             </span>
-            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 hidden sm:inline">
-              Enterprise
-            </span>
 
             {/* Room Code with Copy Link */}
             <div className="flex items-center space-x-1.5 pl-1 text-xs">
               <span className="text-slate-300 hidden sm:inline">•</span>
               <button 
                 onClick={handleCopyCode} 
-                className="flex items-center space-x-1 px-2 py-0.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 font-mono text-[11px] font-medium transition-colors"
+                className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 font-mono text-[11px] font-medium transition-colors shadow-2xs"
                 title="Copy conference invite link"
               >
                 <span>{roomCode}</span>
@@ -131,8 +129,8 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
 
       {/* Center: Live Session Indicators (Streamlined & Minimal) */}
       <div className="hidden md:flex items-center space-x-2">
-        {/* Live Timer Pill */}
-        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-100/80 text-[11px] text-[#0f172a] font-semibold">
+        {/* Live Timer Pill - starts at 00:00 on meeting start */}
+        <div className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-slate-50 text-[11px] text-[#0f172a] font-semibold shadow-2xs">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="font-mono text-slate-700">{formatTime(elapsedSeconds)}</span>
         </div>
@@ -140,10 +138,10 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
         {/* Recording Toggle */}
         <button
           onClick={onToggleRecording}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+          className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition-all shadow-2xs ${
             isRecording
               ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
-              : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-100/80'
+              : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
           }`}
           title={isRecording ? 'Stop Recording' : 'Start 1080p Cloud Recording'}
         >
@@ -154,10 +152,10 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
         {/* Dynamic Watermark Security Toggle */}
         <button
           onClick={onToggleWatermark}
-          className={`p-1.5 rounded-full transition-all text-xs ${
+          className={`p-1.5 rounded-full transition-all text-xs shadow-2xs ${
             isWatermarkActive
               ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-100'
-              : 'bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-100/80'
+              : 'bg-slate-50 hover:bg-slate-100 text-slate-500'
           }`}
           title={isWatermarkActive ? 'Watermark Active (Click to toggle)' : 'Watermark Inactive'}
         >
@@ -166,16 +164,16 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
 
         {/* Subtle E2EE Shield */}
         <div 
-          className="flex items-center space-x-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium"
+          className="flex items-center space-x-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-medium shadow-2xs"
           title="256-bit DTLS-SRTP End-to-End Encryption Verified"
         >
-          <ShieldCheck className="w-3.5 h-3.5" />
-          <span className="hidden lg:inline text-[10px]">E2EE</span>
+          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+          <span className="hidden lg:inline text-[10px] font-semibold">E2EE</span>
         </div>
 
         {/* Green room badge if speakers waiting */}
         {greenRoomParticipants.length > 0 && (
-          <div className="flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold animate-pulse">
+          <div className="flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold animate-pulse shadow-2xs">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
             <span>{greenRoomParticipants.length} Waiting</span>
           </div>
