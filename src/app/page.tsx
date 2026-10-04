@@ -68,10 +68,10 @@ function ConferenceApp() {
   }, [isAuthenticated]);
 
   // Conference Suite State
-  const [roomCode, setRoomCode] = useState('RUPAL-804-SYNC');
+  const [roomCode, setRoomCode] = useState('');
   const [inviteCode, setInviteCode] = useState<string>('');
   const [isHostUser, setIsHostUser] = useState<boolean>(false);
-  const [meetingTitle, setMeetingTitle] = useState('Engineering Architecture & Strategic Review');
+  const [meetingTitle, setMeetingTitle] = useState('Conference Meeting');
   const [activeTab, setActiveTab] = useState<ActiveWorkspaceTab>('stage');
   const [layout, setLayout] = useState<StageLayout>('gallery');
   const [isWatermarkActive, setIsWatermarkActive] = useState(true);
@@ -255,7 +255,7 @@ function ConferenceApp() {
       ...currentUser,
       isSpeaking: false,
     },
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && Boolean(roomCode),
     onRemoteCodeEdit: handleRemoteCodeEdit,
     onRemoteChatMessage: handleRemoteChatMessage,
     onRemoteUpvote: handleRemoteUpvote,
@@ -303,46 +303,37 @@ function ConferenceApp() {
     ...remoteParticipants,
   ];
 
-  // Initialize room in database on mount / roomCode change
+  // Fetch room details and messages if roomCode is set
   useEffect(() => {
-    async function initRoom() {
+    if (!roomCode) return;
+    async function fetchRoom() {
       try {
-        const res = await fetch('/api/rooms', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            roomCode,
-            title: meetingTitle,
-            hostId: user?.id || 'host_default',
-            hostName: user?.name || (isHostUser ? 'Conference Host' : 'Meeting Attendee'),
-            hostRole: isHostUser ? 'host' : (user?.role || 'developer'),
-            hostAvatar: user?.avatar || '',
-            inviteCode: inviteCode || undefined,
-            isInviteOnly: true,
-          })
-        });
-        const data = await res.json();
-        if (data.success && data.room) {
-          if (data.room.inviteCode && !inviteCode) {
-            setInviteCode(data.room.inviteCode);
-          }
-          if (user?.id && data.room.hostId === user.id) {
-            setIsHostUser(true);
-          }
+        const res = await fetch(`/api/rooms/${roomCode}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.room) {
+            if (data.room.inviteCode && !inviteCode) {
+              setInviteCode(data.room.inviteCode);
+            }
+            if (data.room.title && data.room.title !== meetingTitle) {
+              setMeetingTitle(data.room.title);
+            }
+            if (user?.id && data.room.hostId === user.id) {
+              setIsHostUser(true);
+            }
 
-          // Fetch existing messages if any
-          const msgRes = await fetch(`/api/rooms/${roomCode}/messages`);
-          const msgData = await msgRes.json();
-          if (msgData.success && msgData.messages && msgData.messages.length > 0) {
-            setChatMessages(msgData.messages);
+            // Fetch existing messages if any
+            if (data.messages && data.messages.length > 0) {
+              setChatMessages(data.messages);
+            }
           }
         }
       } catch (err) {
-        console.info('Database sync running in memory fallback', err);
+        console.info('Room sync in-memory fallback', err);
       }
     }
-    initRoom();
-  }, [roomCode, meetingTitle, user?.id, user?.name, user?.role, user?.avatar, isHostUser, inviteCode]);
+    fetchRoom();
+  }, [roomCode, user?.id]);
 
   // Audio/Video Toggles
   const handleToggleMic = () => {
