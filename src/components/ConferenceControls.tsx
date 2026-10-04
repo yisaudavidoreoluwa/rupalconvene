@@ -39,6 +39,7 @@ interface ConferenceControlsProps {
   unreadCount?: number;
   roomCode?: string;
   onSendReaction?: (emoji: string) => void;
+  onToggleNotes?: () => void;
 }
 
 const EMOJI_LIST = ['❤️', '👏', '👍', '🔥', '🎉', '🚀'];
@@ -59,6 +60,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   unreadCount = 0,
   roomCode = 'RUPAL-804-SYNC',
   onSendReaction,
+  onToggleNotes,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileTools, setShowMobileTools] = useState(false);
@@ -330,8 +332,20 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           </button>
         </div>
 
-        {/* Right: AI Copilot, Chat */}
+        {/* Right: AI Copilot, My Notes, Chat */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
+          {/* Gemini "My Notes" Button */}
+          {onToggleNotes && (
+            <button
+              onClick={onToggleNotes}
+              className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-semibold bg-[#181a20] hover:bg-[#232733] text-white border border-white/10 transition-all shadow-xs touch-manipulation cursor-pointer"
+              title="My Notes (Gemini AI Personal Notes)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">My Notes</span>
+            </button>
+          )}
+
           {/* Gemini AI Copilot Button */}
           <button
             onClick={() => onTabChange(activeTab === 'ai-intelligence' ? 'stage' : 'ai-intelligence')}

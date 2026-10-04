@@ -83,23 +83,23 @@ export const VideoTile: React.FC<VideoTileProps> = ({
   return (
     <div
       onDoubleClick={onPinToggle}
-      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#0a192f] transition-all duration-200 flex flex-col justify-between shadow-xs select-none touch-manipulation cursor-pointer ${
+      className={`group relative w-full h-full rounded-2xl overflow-hidden bg-[#111318] transition-all duration-200 flex flex-col justify-between select-none touch-manipulation cursor-pointer ${
         participant.isSpeaking
-          ? 'ring-2 ring-emerald-500 shadow-emerald-500/20'
+          ? 'ring-[3px] ring-[#10b981] shadow-[0_0_25px_rgba(16,185,129,0.35)] z-10'
           : isPinned
-          ? 'ring-2 ring-blue-500'
-          : 'ring-1 ring-slate-800/80 hover:ring-slate-700'
+          ? 'ring-2 ring-blue-500 z-10'
+          : 'ring-1 ring-white/10 hover:ring-white/20'
       }`}
     >
       {/* Video Content Layer */}
-      <div className="absolute inset-0 w-full h-full bg-[#0a192f] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 w-full h-full bg-[#111318] flex items-center justify-center overflow-hidden">
         {/* Video Element (Local or Remote) */}
         <video
           ref={activeVideoRef}
           autoPlay
           playsInline
           muted={isSelf}
-          className={`w-full h-full object-cover transition-opacity duration-200 ${
+          className={`w-full h-full object-cover transition-opacity duration-200 z-10 ${
             isSelf ? 'transform -scale-x-100' : ''
           } ${
             !isVideoActive ? 'opacity-0 pointer-events-none' : 'opacity-100'
@@ -111,36 +111,47 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           <audio ref={remoteAudioRef} autoPlay playsInline />
         )}
 
-        {/* Avatar Fallback (when video is disabled or stream not yet loaded) */}
+        {/* Photographic or Avatar Fallback */}
         {!isVideoActive && (
-          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#0f172a] via-[#0a192f] to-[#0f172a]">
-            <div className="relative mb-2 sm:mb-3">
+          participant.avatar && (participant.avatar.includes('attendees/') || participant.avatar.includes('unsplash.com') || participant.avatar.includes('photo-')) ? (
+            <div className="relative w-full h-full">
               <img
                 src={participant.avatar}
                 alt={participant.name}
-                className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg transition-transform group-hover:scale-105 ${
-                  participant.isSpeaking
-                    ? 'ring-3 ring-emerald-400 ring-offset-2 ring-offset-[#0a192f]'
-                    : 'ring-1 ring-slate-700'
-                }`}
+                className="w-full h-full object-cover"
               />
-              {participant.isSpeaking && (
-                <div className="absolute -bottom-1 -right-1 p-1 bg-emerald-500 rounded-full text-white shadow-xs">
-                  <Volume2 className="w-3.5 h-3.5 animate-pulse" />
-                </div>
-              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
             </div>
+          ) : (
+            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#181a20] via-[#111318] to-[#181a20]">
+              <div className="relative mb-2 sm:mb-3">
+                <img
+                  src={participant.avatar}
+                  alt={participant.name}
+                  className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg transition-transform group-hover:scale-105 ${
+                    participant.isSpeaking
+                      ? 'ring-3 ring-[#10b981] ring-offset-2 ring-offset-[#111318]'
+                      : 'ring-1 ring-white/20'
+                  }`}
+                />
+                {participant.isSpeaking && (
+                  <div className="absolute -bottom-1 -right-1 p-1 bg-[#10b981] rounded-full text-white shadow-xs">
+                    <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+                  </div>
+                )}
+              </div>
 
-            <div className="text-center z-10 px-2">
-              <div className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px] sm:max-w-[200px] flex items-center justify-center">
-                <span className="truncate">{cleanName}</span>
-                {isSelf && <span className="text-slate-400 font-normal ml-1 text-xs">(You)</span>}
-              </div>
-              <div className="text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[160px] sm:max-w-[200px] font-medium">
-                {participant.jobTitle || 'Active Member'}
+              <div className="text-center z-10 px-2">
+                <div className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px] sm:max-w-[200px] flex items-center justify-center">
+                  <span className="truncate">{cleanName}</span>
+                  {isSelf && <span className="text-slate-400 font-normal ml-1 text-xs">(You)</span>}
+                </div>
+                <div className="text-[10px] sm:text-[11px] text-slate-400 truncate max-w-[160px] sm:max-w-[200px] font-medium">
+                  {participant.jobTitle || 'Active Member'}
+                </div>
               </div>
             </div>
-          </div>
+          )
         )}
       </div>
 
@@ -187,17 +198,17 @@ export const VideoTile: React.FC<VideoTileProps> = ({
 
       {/* Bottom Bar: Name Tag & Speaking Indicator */}
       <div className="relative z-10 p-2 sm:p-2.5 flex items-center justify-between w-full pointer-events-none">
-        <div className="px-2 py-1 rounded-md bg-[#0f172a]/90 text-white text-[11px] sm:text-xs font-semibold backdrop-blur-md flex items-center space-x-1 shadow-xs max-w-[80%] truncate pointer-events-auto">
+        <div className="px-2.5 py-1 rounded-lg bg-black/60 text-white text-[11px] sm:text-xs font-medium backdrop-blur-md flex items-center space-x-1.5 shadow-md max-w-[80%] truncate pointer-events-auto border border-white/10">
           <span className="truncate">{cleanName}</span>
           {isSelf && <span className="text-slate-400 font-normal text-[10px]">(You)</span>}
         </div>
 
         {/* Dynamic Speaking Waveform */}
         {participant.isSpeaking && (
-          <div className="flex items-center space-x-0.5 px-2 py-1 rounded-md bg-[#0f172a]/90 backdrop-blur-md">
-            <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-bounce" />
-            <span className="w-0.5 h-3 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_100ms]" />
-            <span className="w-0.5 h-2 bg-emerald-400 rounded-full animate-[bounce_0.6s_infinite_200ms]" />
+          <div className="flex items-center space-x-0.5 px-2 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10">
+            <span className="w-0.5 h-2 bg-[#10b981] rounded-full animate-bounce" />
+            <span className="w-0.5 h-3 bg-[#10b981] rounded-full animate-[bounce_0.6s_infinite_100ms]" />
+            <span className="w-0.5 h-2 bg-[#10b981] rounded-full animate-[bounce_0.6s_infinite_200ms]" />
           </div>
         )}
       </div>

@@ -121,6 +121,9 @@ function ConferenceApp() {
     }
   ]);
 
+  // Gemini "My Notes" visibility state (open by default to match reference image)
+  const [isNotesOpen, setIsNotesOpen] = useState(true);
+
   // Local media video reference for HTML5 <video> tag
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -737,10 +740,14 @@ function ConferenceApp() {
         </div>
       )}
 
-      {/* 2. Central Meeting Workspace (Light Canvas #f8fafc with Low Border Clutter) */}
+      {/* 2. Central Meeting Workspace */}
       <div className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative p-1.5 sm:p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]">
-          {/* Main Stage View */}
+        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden relative ${
+          activeTab === 'stage'
+            ? 'p-0 bg-[#0a0c10]'
+            : 'p-1.5 sm:p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]'
+        }`}>
+          {/* Main Stage View (Cinema 2x2 Edge-to-Edge Grid with Gemini Notes) */}
           {activeTab === 'stage' && (
             <div className="flex-1 w-full h-full min-h-0">
               <VideoStage
@@ -751,6 +758,10 @@ function ConferenceApp() {
                 localVideoRef={localVideoRef}
                 currentUserId={currentUser.id}
                 localStream={localStream}
+                captions={captions}
+                meetingTitle={meetingTitle}
+                isNotesOpen={isNotesOpen}
+                onToggleNotes={() => setIsNotesOpen((prev) => !prev)}
               />
             </div>
           )}
@@ -955,6 +966,7 @@ function ConferenceApp() {
         unreadCount={chatMessages.length > 2 ? 1 : 0}
         roomCode={roomCode}
         onSendReaction={broadcastReaction}
+        onToggleNotes={() => setIsNotesOpen((prev) => !prev)}
       />
 
       {/* Floating Live Emoji Reactions Overlay */}
