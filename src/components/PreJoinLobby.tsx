@@ -7,6 +7,7 @@ import {
   Mic, 
   MicOff, 
   ArrowRight, 
+  ArrowLeft,
   Code, 
   Users,
   Presentation, 
@@ -33,6 +34,7 @@ interface PreJoinLobbyProps {
   onToggleVideo: () => void;
   onOpenDocs?: () => void;
   onRoomChange?: (newCode: string, newTitle?: string, newInviteCode?: string) => void;
+  onBackToLanding?: () => void;
   audioLevel?: number;
   localStream?: MediaStream | null;
 }
@@ -63,6 +65,7 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
   onToggleVideo,
   onOpenDocs,
   onRoomChange,
+  onBackToLanding,
   audioLevel = 0,
   localStream,
 }) => {
@@ -249,6 +252,15 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
       {/* Minimal Spacious Header (No Borders, Clean Shadow) */}
       <header className="h-16 px-6 sm:px-10 bg-white flex items-center justify-between shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] flex-shrink-0 z-30">
         <div className="flex items-center space-x-3">
+          {onBackToLanding && (
+            <button
+              onClick={onBackToLanding}
+              className="p-2 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors mr-1 cursor-pointer"
+              title="Back to Home & Calendar"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
           <div className="w-8 h-8 rounded-xl bg-[#0f172a] text-white flex items-center justify-center shadow-sm">
             <span className="font-extrabold text-base">R</span>
           </div>

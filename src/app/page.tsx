@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { PreJoinLobby } from '@/components/PreJoinLobby';
+import { LandingPage } from '@/components/LandingPage';
 import { ConferenceHeader } from '@/components/ConferenceHeader';
 import { VideoStage } from '@/components/VideoStage';
 import { CodeWorkspace } from '@/components/CodeWorkspace';
@@ -58,15 +59,24 @@ export default function Home() {
 function ConferenceApp() {
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
-  // Lobby gate: Defaults to true so users land on the Pre-Join Lobby
-  const [inLobby, setInLobby] = useState(true);
-
-  // Strictly enforce authentication gate: if user logs out, return to lobby
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setInLobby(true);
+  // View Flow: 'landing' (visitors / home), 'lobby' (pre-join test), 'meeting' (live session)
+  const [currentView, setCurrentView] = useState<'landing' | 'lobby' | 'meeting'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      // If user navigated with direct room or invite link, jump straight to lobby
+      if (params.get('room') || params.get('invite') || params.get('direct')) {
+        return 'lobby';
+      }
     }
-  }, [isAuthenticated]);
+    return 'landing';
+  });
+
+  // Strictly enforce authentication gate: if user logs out while in meeting, return to lobby
+  useEffect(() => {
+    if (!isAuthenticated && currentView === 'meeting') {
+      setCurrentView('lobby');
+    }
+  }, [isAuthenticated, currentView]);
 
   // Conference Suite State
   const [roomCode, setRoomCode] = useState('');
@@ -253,7 +263,7 @@ function ConferenceApp() {
 
   const handleRemoteEndMeeting = useCallback((payload: { hostId: string; hostName: string; endedAt?: string }) => {
     showToast(`Meeting ended by ${payload?.hostName || 'the host'}. Returning to lobby...`, 'warn');
-    setTimeout(() => setInLobby(true), 2500);
+    setTimeout(() => setCurrentView('lobby'), 2500);
   }, [showToast]);
 
   // Real-time WebRTC Mesh & Supabase Realtime Signaling Hook
@@ -336,7 +346,7 @@ function ConferenceApp() {
         localVideoRef.current.srcObject = localStream;
       }
     }
-  }, [localStream, inLobby]);
+  }, [localStream, currentView]);
 
   // Combined Participants: Local User + Live Remote Peers across devices
   const allParticipants: Participant[] = [
@@ -565,12 +575,39 @@ function ConferenceApp() {
     setInviteCode(newInviteCode);
     setIsHostUser(true);
     if (startTab) setActiveTab(startTab);
-    setInLobby(false);
+    setCurrentView('meeting');
     initLocalMedia();
   };
 
-  // If in Pre-Join Lobby screen or unauthenticated
-  if (inLobby || !isAuthenticated) {
+  // 1. Landing Page View (Visitors & new users see this first before auth/lobby)
+  if (currentView === 'landing') {
+    return (
+      <>
+        <LandingPage
+          onProceedToLobby={(mode) => {
+            if (mode === 'host') {
+              setIsHostUser(true);
+            }
+            setCurrentView('lobby');
+          }}
+          onJoinSpecificRoom={(code, invite, title) => {
+            setRoomCode(code);
+            if (invite) setInviteCode(invite);
+            if (title) setMeetingTitle(title);
+            setCurrentView('lobby');
+          }}
+          onOpenDocs={() => setIsDocsOpen(true)}
+        />
+        <DocumentationModal
+          isOpen={isDocsOpen}
+          onClose={() => setIsDocsOpen(false)}
+        />
+      </>
+    );
+  }
+
+  // 2. Pre-Join Lobby View (Hardware test, host creation & join credentials)
+  if (currentView === 'lobby' || !isAuthenticated) {
     return (
       <>
         <PreJoinLobby
@@ -585,13 +622,14 @@ function ConferenceApp() {
           }}
           audioLevel={audioLevel}
           localStream={localStream}
+          onBackToLanding={() => setCurrentView('landing')}
           onJoinMeeting={(startTab) => {
             if (!isAuthenticated) {
               openAuthModal('login');
               return;
             }
             if (startTab) setActiveTab(startTab);
-            setInLobby(false);
+            setCurrentView('meeting');
             initLocalMedia();
           }}
           onHostMeeting={handleHostMeeting}
@@ -673,7 +711,7 @@ function ConferenceApp() {
         }}
         onOpenInvite={() => setIsInviteOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
-        onBackToPortal={() => setInLobby(true)}
+        onBackToPortal={() => setCurrentView('lobby')}
       />
 
       {/* Host Access Request Banner (Requirement 2 & 6) */}
@@ -1003,7 +1041,7 @@ function ConferenceApp() {
         isHost={isHost}
         onConfirmLeave={() => {
           teardownMedia();
-          setInLobby(true);
+          setCurrentView('landing');
           setIsLeaveOpen(false);
         }}
         onEndMeetingForAll={async () => {
@@ -1024,8 +1062,8 @@ function ConferenceApp() {
             setIsRecording(false);
           }
           teardownMedia();
-          showToast('Meeting ended. All participants have been returned to lobby.', 'info');
-          setInLobby(true);
+          showToast('Meeting ended. All participants have been returned to home.', 'info');
+          setCurrentView('landing');
           setIsLeaveOpen(false);
         }}
       />

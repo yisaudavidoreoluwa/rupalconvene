@@ -1,0 +1,409 @@
+'use client';
+
+import React, { useState } from 'react';
+import { 
+  Sparkles, 
+  ArrowRight, 
+  Calendar as CalendarIcon, 
+  Video, 
+  Code, 
+  Layout, 
+  ShieldCheck, 
+  Users, 
+  Lock, 
+  Zap, 
+  CheckCircle2, 
+  Play, 
+  ExternalLink,
+  ChevronRight,
+  Plus
+} from 'lucide-react';
+import { DeviceMockup } from './DeviceMockup';
+import { ConferenceCalendar } from './ConferenceCalendar';
+import { ScheduleMeetingModal } from './ScheduleMeetingModal';
+import { ScheduledConference, INITIAL_SCHEDULED_CONFERENCES } from '@/types/schedule';
+import { useAuth } from '@/context/AuthContext';
+import { UserProfileMenu } from './UserProfileMenu';
+
+interface LandingPageProps {
+  onProceedToLobby: (mode?: 'host' | 'join') => void;
+  onJoinSpecificRoom: (roomCode: string, inviteCode?: string, title?: string) => void;
+  onOpenDocs: () => void;
+}
+
+export const LandingPage: React.FC<LandingPageProps> = ({
+  onProceedToLobby,
+  onJoinSpecificRoom,
+  onOpenDocs,
+}) => {
+  const { user, isAuthenticated, openAuthModal } = useAuth();
+
+  // Schedule modal state
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [scheduledConferences, setScheduledConferences] = useState<ScheduledConference[]>(INITIAL_SCHEDULED_CONFERENCES);
+
+  // Quick join room input
+  const [quickRoomCode, setQuickRoomCode] = useState('');
+
+  const handleQuickJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (quickRoomCode.trim()) {
+      onJoinSpecificRoom(quickRoomCode.trim().toUpperCase());
+    } else {
+      onProceedToLobby('join');
+    }
+  };
+
+  const handleMeetingScheduled = (newMeeting: ScheduledConference) => {
+    setScheduledConferences((prev) => [newMeeting, ...prev]);
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-[#f8fafc] text-[#0f172a] flex flex-col font-sans select-none overflow-x-hidden">
+      {/* ============================================================ */}
+      {/* 1. MINIMAL SPACIOUS NAVIGATION HEADER                        */}
+      {/* ============================================================ */}
+      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] px-6 sm:px-12 py-3.5 flex items-center justify-between">
+        {/* Brand Logo */}
+        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="w-9 h-9 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center shadow-sm">
+            <span className="font-extrabold text-base">R</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="font-extrabold text-base sm:text-lg text-[#0f172a] tracking-tight leading-none">
+              Rupal Convene
+            </span>
+            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+              Engineering Video Suite
+            </span>
+          </div>
+        </div>
+
+        {/* Center Nav Links */}
+        <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
+          <a href="#preview" className="hover:text-[#0f172a] transition-colors">
+            Device Mockup
+          </a>
+          <a href="#calendar" className="hover:text-[#0f172a] transition-colors">
+            Conferences & Calendar
+          </a>
+          <a href="#features" className="hover:text-[#0f172a] transition-colors">
+            Workspace Tools
+          </a>
+          <button onClick={onOpenDocs} className="hover:text-[#0f172a] transition-colors cursor-pointer">
+            Documentation
+          </button>
+        </nav>
+
+        {/* Right CTA Actions */}
+        <div className="flex items-center space-x-2.5">
+          {isAuthenticated ? (
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => onProceedToLobby('host')}
+                className="hidden sm:flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                <span>Enter Meeting Lobby</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+              <UserProfileMenu />
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => openAuthModal('login')}
+                className="px-4 py-2 rounded-full text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => openAuthModal('signup')}
+                className="px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ============================================================ */}
+      {/* 2. HERO SECTION (SPACIOUS & ELEVATED)                        */}
+      {/* ============================================================ */}
+      <section className="max-w-5xl mx-auto px-6 pt-12 sm:pt-20 pb-10 text-center flex flex-col items-center">
+        {/* Status Tag Pill */}
+        <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-white shadow-xs border border-slate-200/70 text-xs font-semibold text-slate-700 mb-6 animate-in fade-in slide-in-from-top-2">
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>WebRTC P2P Data Mesh</span>
+          <span className="text-slate-300">•</span>
+          <span className="text-blue-600 font-bold flex items-center">
+            <Sparkles className="w-3 h-3 mr-1 text-blue-500" />
+            Gemini 3.5 AI Notes
+          </span>
+        </div>
+
+        {/* Main Headline */}
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0f172a] max-w-4xl leading-[1.12]">
+          Ultra-Fast Video Conferences for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">Builders & Leaders</span>
+        </h1>
+
+        {/* Subtitle */}
+        <p className="text-sm sm:text-base md:text-lg text-slate-600 mt-5 max-w-2xl leading-relaxed">
+          Host high-definition conferences with side-by-side collaborative code editing, interactive architecture whiteboards, synchronized pitch decks, and automated Gemini personal meeting notes.
+        </p>
+
+        {/* Primary Action Button Cluster */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-md">
+          {/* Host Instant Meeting */}
+          <button
+            onClick={() => onProceedToLobby('host')}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <Video className="w-4 h-4" />
+            <span>Host Instant Meeting</span>
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </button>
+
+          {/* Schedule Meeting Button */}
+          <button
+            onClick={() => setIsScheduleOpen(true)}
+            className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-white hover:bg-slate-50 text-[#0f172a] font-bold text-xs sm:text-sm shadow-sm border border-slate-200/80 transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+          >
+            <CalendarIcon className="w-4 h-4 text-blue-600" />
+            <span>Schedule a Meeting</span>
+          </button>
+        </div>
+
+        {/* Quick Join With Code Bar */}
+        <form onSubmit={handleQuickJoin} className="mt-5 flex items-center space-x-2 max-w-sm w-full">
+          <input
+            type="text"
+            placeholder="Enter Room Code (e.g. RUPAL-804-SYNC)"
+            value={quickRoomCode}
+            onChange={(e) => setQuickRoomCode(e.target.value.toUpperCase())}
+            className="flex-1 px-4 py-2.5 rounded-full bg-white border border-slate-200 text-xs font-mono uppercase text-[#0f172a] placeholder:normal-case placeholder:font-sans placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-xs"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2.5 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-xs transition-colors cursor-pointer"
+          >
+            Join
+          </button>
+        </form>
+
+        {/* Trust Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 mt-10 text-xs text-slate-500 font-medium">
+          <div className="flex items-center space-x-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>256-Bit DTLS/SRTP E2EE</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <Zap className="w-4 h-4 text-blue-600" />
+            <span>Sub-2ms Peer Signaling</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <Lock className="w-4 h-4 text-slate-600" />
+            <span>Strict Invite-Only Passcodes</span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span>Automated AI Minutes</span>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 3. DEVICE MOCKUP SHOWCASE (DESKTOP & MOBILE)                 */}
+      {/* ============================================================ */}
+      <section className="max-w-6xl mx-auto px-6 py-6" id="preview">
+        <div className="text-center mb-4">
+          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
+            Interactive Product Preview
+          </h2>
+          <p className="text-xl sm:text-2xl font-extrabold text-[#0f172a] mt-1">
+            Engineered for Desktop & Mobile Form Factors
+          </p>
+        </div>
+
+        {/* Render Device Mockup Component */}
+        <DeviceMockup />
+      </section>
+
+      {/* ============================================================ */}
+      {/* 4. CONFERENCES & CALENDAR SECTION                            */}
+      {/* ============================================================ */}
+      <section className="max-w-6xl mx-auto px-6 py-12" id="calendar">
+        <ConferenceCalendar
+          conferences={scheduledConferences}
+          onScheduleClick={() => setIsScheduleOpen(true)}
+          onJoinConference={(code, invite, title) => onJoinSpecificRoom(code, invite, title)}
+        />
+      </section>
+
+      {/* ============================================================ */}
+      {/* 5. WORKSPACE FEATURES MATRIX (CLEAN, NO HEAVY BORDERS)       */}
+      {/* ============================================================ */}
+      <section className="max-w-6xl mx-auto px-6 py-12" id="features">
+        <div className="text-center max-w-2xl mx-auto mb-10">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+            Next-Generation Workspaces
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] mt-1">
+            Everything your engineering team needs during a call
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 mt-2">
+            No more switching tabs. Code, draw architecture, present slides, and take AI notes inside a single secure meeting room.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Feature 1 */}
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shadow-xs">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
+                Gemini AI "My Notes" Studio
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                Take notes or let Gemini transcribe live speech into private summaries, bulleted highlights, and checkable action items tailored specifically for you.
+              </p>
+            </div>
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-blue-600">
+              <span>Personalized meeting intelligence</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 shadow-xs">
+                <Code className="w-6 h-6" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
+                Side-by-Side Collaborative IDE
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                Write HTML, JavaScript, CSS, or TypeScript collaboratively with instant side-by-side rendering, syntax highlighting, and host-controlled write permissions.
+              </p>
+            </div>
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-indigo-600">
+              <span>Sub-2ms peer code synchronization</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 shadow-xs">
+                <Layout className="w-6 h-6" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
+                Architectural Whiteboard & Slides
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                Model complex cloud topologies, draw freehand diagrams, import PDF slides directly onto the canvas, and guide attendees with real-time laser pointers.
+              </p>
+            </div>
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-emerald-600">
+              <span>Real-time multi-user diagramming</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+
+          {/* Feature 4 */}
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+            <div>
+              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 shadow-xs">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
+                Invite-Only Security & Green Room
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+                Stage keynotes and guest presenters in the backstage green room before admitting them to the main floor. Protected by cryptographic invite verification.
+              </p>
+            </div>
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-purple-600">
+              <span>Zero-trust meeting admittance</span>
+              <ArrowRight className="w-3.5 h-3.5 ml-1" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 6. BOTTOM CALL TO ACTION CARD                                */}
+      {/* ============================================================ */}
+      <section className="max-w-5xl mx-auto px-6 py-12 w-full">
+        <div className="bg-[#0f172a] rounded-3xl p-8 sm:p-12 text-white text-center shadow-xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 max-w-xl mx-auto space-y-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Ready to host your next high-impact conference?
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              Experience ultra-low latency WebRTC audio/video mesh, live collaborative IDE, and Gemini AI notes without downloading any software.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
+              <button
+                onClick={() => onProceedToLobby('host')}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                Host a Meeting Now
+              </button>
+              <button
+                onClick={() => setIsScheduleOpen(true)}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+              >
+                Schedule for Later
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 7. MINIMAL FOOTER                                            */}
+      {/* ============================================================ */}
+      <footer className="mt-auto border-t border-slate-200/70 bg-white py-8 px-6 sm:px-12 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center space-x-2">
+          <div className="w-5 h-5 rounded-lg bg-[#0f172a] text-white flex items-center justify-center text-[10px] font-bold">
+            R
+          </div>
+          <span className="font-bold text-[#0f172a]">Rupal Convene</span>
+          <span>© 2026. Enterprise WebRTC & Gemini AI Intelligence.</span>
+        </div>
+
+        <div className="flex items-center space-x-5 font-medium">
+          <button onClick={onOpenDocs} className="hover:text-[#0f172a] transition-colors cursor-pointer">
+            Documentation & SDK
+          </button>
+          <span className="text-slate-300">•</span>
+          <button onClick={() => setIsScheduleOpen(true)} className="hover:text-[#0f172a] transition-colors cursor-pointer">
+            Schedule Conference
+          </button>
+          <span className="text-slate-300">•</span>
+          <span className="text-emerald-600 font-semibold flex items-center">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
+            Mesh Online
+          </span>
+        </div>
+      </footer>
+
+      {/* Schedule Meeting Modal */}
+      <ScheduleMeetingModal
+        isOpen={isScheduleOpen}
+        onClose={() => setIsScheduleOpen(false)}
+        onMeetingScheduled={handleMeetingScheduled}
+        onHostNow={(roomCode, title, inviteCode) => {
+          onJoinSpecificRoom(roomCode, inviteCode, title);
+        }}
+      />
+    </div>
+  );
+};
