@@ -62,7 +62,7 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
               id: session.user.id,
               name: meta.name || meta.full_name || session.user.email?.split('@')[0] || 'Convene User',
               email: session.user.email || '',
-              avatar: getUserAvatar(meta.avatar_url, meta.name || session.user.email),
+              avatar: getUserAvatar(meta.avatar_url || meta.picture, meta.name || meta.full_name || session.user.email),
               provider: (session.user.app_metadata?.provider as AuthProvider) || 'email',
               role: meta.role || 'developer',
               organization: meta.organization || 'Rupal Tech Solutions',
@@ -74,6 +74,21 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
             setUser(profile);
             setToken(session.access_token);
             setIsAuthenticated(true);
+            // Persist OAuth user data to database (GitHub, Discord, Google)
+            try {
+              fetch('/api/auth/upsert-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({
+                  id: profile.id,
+                  name: profile.name,
+                  email: profile.email,
+                  avatar: meta.avatar_url || meta.picture || profile.avatar,
+                  provider: profile.provider,
+                  role: profile.role,
+                }),
+              }).catch(() => {});
+            } catch {}
           } else {
             setIsAuthenticated(false);
             setUser(null);
@@ -91,7 +106,7 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
               id: session.user.id,
               name: meta.name || meta.full_name || session.user.email?.split('@')[0] || 'Convene User',
               email: session.user.email || '',
-              avatar: getUserAvatar(meta.avatar_url, meta.name || session.user.email),
+              avatar: getUserAvatar(meta.avatar_url || meta.picture, meta.name || meta.full_name || session.user.email),
               provider: (session.user.app_metadata?.provider as AuthProvider) || 'email',
               role: meta.role || 'developer',
               organization: meta.organization || 'Rupal Tech Solutions',
@@ -104,6 +119,21 @@ export function AuthProviderComponent({ children }: { children: React.ReactNode 
             setToken(session.access_token);
             setIsAuthenticated(true);
             setIsAuthModalOpen(false);
+            // Persist OAuth user on every auth state change (new login, token refresh)
+            if (_event === 'SIGNED_IN' || _event === 'TOKEN_REFRESHED') {
+              fetch('/api/auth/upsert-profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({
+                  id: profile.id,
+                  name: profile.name,
+                  email: profile.email,
+                  avatar: meta.avatar_url || meta.picture || profile.avatar,
+                  provider: profile.provider,
+                  role: profile.role,
+                }),
+              }).catch(() => {});
+            }
           } else {
             setIsAuthenticated(false);
             setUser(null);

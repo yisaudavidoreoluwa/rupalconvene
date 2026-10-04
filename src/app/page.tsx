@@ -76,6 +76,8 @@ function ConferenceApp() {
   const [layout, setLayout] = useState<StageLayout>('gallery');
   const [isWatermarkActive, setIsWatermarkActive] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<BlobPart[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [splitVideoEnabled, setSplitVideoEnabled] = useState(true);
 
@@ -84,6 +86,12 @@ function ConferenceApp() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warn' } | null>(null);
+
+  const showToast = useCallback((message: string, type: 'info' | 'success' | 'warn' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   // Hardware and In-call Media States
   const [isMuted, setIsMuted] = useState(false);
@@ -228,9 +236,9 @@ function ConferenceApp() {
   }, []);
 
   const handleRemoteEndMeeting = useCallback((payload: { hostId: string; hostName: string; endedAt?: string }) => {
-    alert(`The meeting session was ended by the host (${payload?.hostName || 'Host'}). All participants have been returned to the lobby.`);
-    setInLobby(true);
-  }, []);
+    showToast(`Meeting ended by ${payload?.hostName || 'the host'}. Returning to lobby...`, 'warn');
+    setTimeout(() => setInLobby(true), 2500);
+  }, [showToast]);
 
   // Real-time WebRTC Mesh & Supabase Realtime Signaling Hook
   const {
@@ -585,7 +593,55 @@ function ConferenceApp() {
         isWatermarkActive={isWatermarkActive}
         onToggleWatermark={() => setIsWatermarkActive(!isWatermarkActive)}
         isRecording={isRecording}
-        onToggleRecording={() => setIsRecording(!isRecording)}
+        onToggleRecording={() => {
+          if (!isRecording) {
+            // Start recording
+            const stream = localStream;
+            if (!stream) {
+              showToast('No active camera/mic stream to record. Please enable media first.', 'warn');
+              return;
+            }
+            try {
+              const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+                ? 'video/webm;codecs=vp9,opus'
+                : MediaRecorder.isTypeSupported('video/webm')
+                ? 'video/webm'
+                : '';
+              const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+              recordingChunksRef.current = [];
+              recorder.ondataavailable = (e) => {
+                if (e.data && e.data.size > 0) {
+                  recordingChunksRef.current.push(e.data);
+                }
+              };
+              recorder.onstop = () => {
+                const blob = new Blob(recordingChunksRef.current, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rupal-meeting-${roomCode}-${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.webm`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+                recordingChunksRef.current = [];
+                showToast('Meeting recording saved and downloaded.', 'success');
+              };
+              recorder.start(1000); // collect data every 1s
+              mediaRecorderRef.current = recorder;
+              setIsRecording(true);
+              showToast('Meeting recording started.', 'info');
+            } catch (err) {
+              console.error('Failed to start recording:', err);
+              showToast('Recording not supported in this browser.', 'warn');
+            }
+          } else {
+            // Stop recording — triggers onstop → auto-download
+            mediaRecorderRef.current?.stop();
+            mediaRecorderRef.current = null;
+            setIsRecording(false);
+          }
+        }}
         onOpenInvite={() => setIsInviteOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
         onBackToPortal={() => setInLobby(true)}
@@ -912,8 +968,14 @@ function ConferenceApp() {
           } catch (e) {
             console.warn('Failed to update room status:', e);
           }
+          // Stop any active recording before teardown
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current = null;
+            setIsRecording(false);
+          }
           teardownMedia();
-          alert('Meeting ended for everyone. All participants have been returned to lobby.');
+          showToast('Meeting ended. All participants have been returned to lobby.', 'info');
           setInLobby(true);
           setIsLeaveOpen(false);
         }}
@@ -923,6 +985,15 @@ function ConferenceApp() {
         isOpen={isDocsOpen}
         onClose={() => setIsDocsOpen(false)}
       />
+
+      {/* In-App Minimal Toast Overlay */}
+      {toast && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] px-5 py-3 rounded-2xl shadow-xl border border-white/10 text-xs sm:text-sm font-medium text-white backdrop-blur-md transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${
+          toast.type === 'warn' ? 'bg-amber-600/95' : toast.type === 'success' ? 'bg-emerald-600/95' : 'bg-slate-900/95'
+        }`}>
+          {toast.message}
+        </div>
+      )}
     </div>
   );
 }

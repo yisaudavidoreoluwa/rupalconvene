@@ -36,7 +36,8 @@ import {
   Columns,
   Rows,
   ChevronDown,
-  UserCheck
+  UserCheck,
+  GripVertical
 } from 'lucide-react';
 import { CodeFile, CodeLanguage, TerminalLog, RoomPermissions, Participant } from '@/types/meeting';
 import { executeCodeInSandbox, buildHypertextPreviewBundle } from '@/lib/code-runner';
@@ -85,6 +86,10 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   
   // Layout states: 'side-by-side' (default), 'stacked', 'editor-only', 'preview-only'
   const [workspaceLayout, setWorkspaceLayout] = useState<'side-by-side' | 'stacked' | 'editor-only' | 'preview-only'>('side-by-side');
+  const [editorWidthPct, setEditorWidthPct] = useState(50);
+  const isDraggingSplitRef = useRef(false);
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
+
   const [activeRightTab, setActiveRightTab] = useState<'preview' | 'terminal'>('preview');
   const [activeTerminalTab, setActiveTerminalTab] = useState<'all' | 'stdout' | 'stderr' | 'metrics'>('all');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -111,6 +116,33 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const lineNumbersRef = useRef<HTMLDivElement | null>(null);
   const broadcastDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Drag listeners for adjustable split pane
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDraggingSplitRef.current || !splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const offset = e.clientX - rect.left;
+      const pct = Math.min(Math.max((offset / rect.width) * 100, 20), 80);
+      setEditorWidthPct(Math.round(pct));
+    };
+
+    const handleMouseUp = () => {
+      if (isDraggingSplitRef.current) {
+        isDraggingSplitRef.current = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const [terminalLogs, setTerminalLogs] = useState<TerminalLog[]>([
     {
@@ -579,16 +611,39 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
 
         {/* Right: Layout Switcher, AI, Share, Copy, Run & Fullscreen (Requirement 1) */}
         <div className="flex items-center space-x-1.5 flex-shrink-0">
-          {/* Side-by-Side vs Stacked Layout Mode Toggle */}
+          {/* Full Width Codebase Quick Toggle */}
+          <button
+            onClick={() => setWorkspaceLayout(workspaceLayout === 'editor-only' ? 'side-by-side' : 'editor-only')}
+            className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-xs ${
+              workspaceLayout === 'editor-only'
+                ? 'bg-blue-600 text-white'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80 active:scale-95'
+            }`}
+            title={workspaceLayout === 'editor-only' ? 'Restore Split View (Editor + Preview)' : 'Expand Codebase to Full Width'}
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{workspaceLayout === 'editor-only' ? 'Split View' : 'Full Width'}</span>
+          </button>
+
+          {/* Layout Mode Selector (Side-by-Side, Full Code, Stacked, Preview) */}
           <div className="hidden lg:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
             <button
               onClick={() => setWorkspaceLayout('side-by-side')}
               className={`p-1 rounded text-xs transition-colors ${
                 workspaceLayout === 'side-by-side' ? 'bg-white text-[#0f172a] font-bold shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
               }`}
-              title="Side-by-side Layout (Editor + Live Preview)"
+              title="Side-by-side Split View"
             >
               <Columns className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setWorkspaceLayout('editor-only')}
+              className={`p-1 rounded text-xs transition-colors ${
+                workspaceLayout === 'editor-only' ? 'bg-white text-[#0f172a] font-bold shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+              }`}
+              title="Full Width Codebase View"
+            >
+              <Code2 className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={() => setWorkspaceLayout('stacked')}
@@ -599,7 +654,40 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
             >
               <Rows className="w-3.5 h-3.5" />
             </button>
+            <button
+              onClick={() => setWorkspaceLayout('preview-only')}
+              className={`p-1 rounded text-xs transition-colors ${
+                workspaceLayout === 'preview-only' ? 'bg-white text-[#0f172a] font-bold shadow-xs' : 'text-slate-500 hover:text-[#0f172a]'
+              }`}
+              title="Full Preview Only"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
           </div>
+
+          {/* Quick Width Presets in Side-by-Side Mode */}
+          {workspaceLayout === 'side-by-side' && (
+            <div className="hidden xl:flex items-center space-x-1 text-[11px] text-slate-500 font-mono">
+              <button
+                onClick={() => setEditorWidthPct(50)}
+                className={`px-1.5 py-0.5 rounded text-[11px] transition-colors ${
+                  editorWidthPct === 50 ? 'bg-slate-200 text-slate-800 font-bold' : 'hover:bg-slate-100'
+                }`}
+                title="Reset to 50/50 Split"
+              >
+                50%
+              </button>
+              <button
+                onClick={() => setEditorWidthPct(70)}
+                className={`px-1.5 py-0.5 rounded text-[11px] transition-colors ${
+                  editorWidthPct === 70 ? 'bg-slate-200 text-slate-800 font-bold' : 'hover:bg-slate-100'
+                }`}
+                title="Expand to 70% Code Width"
+              >
+                70%
+              </button>
+            </div>
+          )}
 
           {/* Explain with Gemini AI Button */}
           <button
@@ -656,19 +744,25 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
       </div>
 
       {/* 2. Main Workspace Surface: Side-by-Side (Split) or Stacked Layout */}
-      <div className={`flex-1 min-h-0 bg-[#0a192f] relative overflow-hidden flex ${
-        workspaceLayout === 'stacked' ? 'flex-col' : 'flex-col md:flex-row'
-      }`}>
+      <div 
+        ref={splitContainerRef}
+        className={`flex-1 min-h-0 bg-[#0a192f] relative overflow-hidden flex ${
+          workspaceLayout === 'stacked' ? 'flex-col' : 'flex-col md:flex-row'
+        }`}
+      >
         {/* LEFT / TOP PANE: Code Editor */}
-        <div className={`flex flex-col min-h-0 overflow-hidden relative ${
-          workspaceLayout === 'editor-only'
-            ? 'w-full h-full'
-            : workspaceLayout === 'preview-only'
-            ? 'hidden'
-            : workspaceLayout === 'stacked'
-            ? 'w-full h-1/2 border-b border-[#1e293b]'
-            : 'w-full md:w-1/2 h-full border-r border-[#1e293b]'
-        }`}>
+        <div 
+          style={workspaceLayout === 'side-by-side' ? { width: `${editorWidthPct}%` } : undefined}
+          className={`flex flex-col min-h-0 overflow-hidden relative ${
+            workspaceLayout === 'editor-only'
+              ? 'w-full h-full'
+              : workspaceLayout === 'preview-only'
+              ? 'hidden'
+              : workspaceLayout === 'stacked'
+              ? 'w-full h-1/2 border-b border-[#1e293b]'
+              : 'h-full'
+          }`}
+        >
           {/* Live Remote Editor Presence Banner (Requirement 3) */}
           {remoteEditorStatus && (
             <div className="h-6 bg-emerald-950/70 border-b border-emerald-800/50 px-3 flex items-center justify-between text-[11px] text-emerald-300 font-mono flex-shrink-0 animate-in fade-in">
@@ -719,16 +813,36 @@ export const CodeWorkspace: React.FC<CodeWorkspaceProps> = ({
           </div>
         </div>
 
+        {/* DRAGGABLE RESIZER SPLITTER (Requirement: Allow codebase adjustments) */}
+        {workspaceLayout === 'side-by-side' && (
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault();
+              isDraggingSplitRef.current = true;
+              document.body.style.cursor = 'col-resize';
+              document.body.style.userSelect = 'none';
+            }}
+            onDoubleClick={() => setEditorWidthPct(50)}
+            title={`Drag to adjust editor width (${editorWidthPct}%) • Double-click to reset (50/50)`}
+            className="hidden md:flex w-2.5 hover:w-3 bg-[#071324] hover:bg-blue-600/80 border-x border-[#1e293b] cursor-col-resize items-center justify-center transition-all z-20 group relative select-none flex-shrink-0"
+          >
+            <div className="w-0.5 h-8 bg-slate-600 rounded group-hover:bg-white transition-colors" />
+          </div>
+        )}
+
         {/* RIGHT / BOTTOM PANE: Live Browser Preview & Terminal Console (Requirement 1) */}
-        <div className={`flex flex-col min-h-0 bg-[#050c18] overflow-hidden ${
-          workspaceLayout === 'preview-only'
-            ? 'w-full h-full'
-            : workspaceLayout === 'editor-only'
-            ? 'hidden'
-            : workspaceLayout === 'stacked'
-            ? 'w-full h-1/2'
-            : 'w-full md:w-1/2 h-full'
-        }`}>
+        <div 
+          style={workspaceLayout === 'side-by-side' ? { width: `${100 - editorWidthPct}%` } : undefined}
+          className={`flex flex-col min-h-0 bg-[#050c18] overflow-hidden ${
+            workspaceLayout === 'preview-only'
+              ? 'w-full h-full'
+              : workspaceLayout === 'editor-only'
+              ? 'hidden'
+              : workspaceLayout === 'stacked'
+              ? 'w-full h-1/2'
+              : 'h-full'
+          }`}
+        >
           {/* Right Sub-Header: Live Preview vs Terminal Console Switcher */}
           <div className="h-10 bg-[#071324] border-b border-[#1e293b] px-3 flex items-center justify-between text-xs select-none flex-shrink-0">
             <div className="flex items-center space-x-1.5">
