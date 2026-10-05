@@ -215,13 +215,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* ============================================================ */}
       {/* 3. DEVICE MOCKUP SHOWCASE (DESKTOP & MOBILE)                 */}
       {/* ============================================================ */}
-      <section className="max-w-6xl mx-auto px-6 py-6" id="preview">
-        <div className="text-center mb-4">
-          <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400">
-            Interactive Product Preview
-          </h2>
-          <p className="text-xl sm:text-2xl font-extrabold text-[#0f172a] mt-1">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12" id="preview">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+            <span>Interactive Product Preview</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#0f172a] tracking-tight">
             Engineered for Desktop & Mobile Form Factors
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto mt-2">
+            Seamless peer-to-peer conferencing across browsers, laptops, and smartphones with synchronized AI intelligence.
           </p>
         </div>
 
