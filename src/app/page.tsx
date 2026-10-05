@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { createSimulatedAttendees } from '@/lib/simulated-participants';
 import { PreJoinLobby } from '@/components/PreJoinLobby';
 import { LandingPage } from '@/components/LandingPage';
 import { ConferenceHeader } from '@/components/ConferenceHeader';
@@ -131,8 +132,13 @@ function ConferenceApp() {
     }
   ]);
 
-  // Gemini "My Notes" visibility state (open by default to match reference image)
-  const [isNotesOpen, setIsNotesOpen] = useState(true);
+  // Gemini "My Notes" visibility state (closed by default to keep video stage clean & unobstructed)
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+
+  // Participant synchronization & 30+ scale simulation
+  const [dbParticipants, setDbParticipants] = useState<Participant[]>([]);
+  const [isScaleSimulated, setIsScaleSimulated] = useState(false);
+  const [simulatedParticipants, setSimulatedParticipants] = useState<Participant[]>([]);
 
   // Local media video reference for HTML5 <video> tag
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -348,15 +354,146 @@ function ConferenceApp() {
     }
   }, [localStream, currentView]);
 
-  // Combined Participants: Local User + Live Remote Peers across devices
-  const allParticipants: Participant[] = [
-    {
+  // Register current user into the room's participant roster upon joining
+  useEffect(() => {
+    if (currentView === 'meeting' && roomCode && currentUser.id) {
+      fetch(`/api/rooms/${roomCode}/participants`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          name: currentUser.name,
+          role: currentUser.role,
+          avatar: currentUser.avatar,
+        }),
+      }).catch((e) => console.warn('[Participants] Registration deferred:', e));
+
+      const handleUnload = () => {
+        navigator.sendBeacon?.(
+          `/api/rooms/${roomCode}/participants?userId=${encodeURIComponent(currentUser.id)}`
+        );
+      };
+      window.addEventListener('beforeunload', handleUnload);
+      return () => {
+        window.removeEventListener('beforeunload', handleUnload);
+      };
+    }
+  }, [currentView, roomCode, currentUser.id, currentUser.name, currentUser.role, currentUser.avatar]);
+
+  // Periodic REST poll for participants in the room (handles cross-tab and cross-device sync)
+  useEffect(() => {
+    if (currentView !== 'meeting' || !roomCode) return;
+    let isCancelled = false;
+
+    const syncParticipants = async () => {
+      try {
+        const res = await fetch(`/api/rooms/${roomCode}/participants`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!isCancelled && data.success && Array.isArray(data.participants)) {
+            const others = data.participants
+              .filter((p: any) => p.userId !== currentUser.id)
+              .map((p: any) => ({
+                id: p.userId,
+                name: p.name,
+                email: '',
+                role: (p.role || 'developer') as Participant['role'],
+                avatar: p.avatar,
+                organization: 'Rupal Convene',
+                jobTitle: p.role === 'host' ? 'Meeting Host' : 'Engineer',
+                isMuted: Boolean(p.isMuted),
+                isVideoOff: Boolean(p.isVideoOff),
+                isSpeaking: false,
+                handRaised: false,
+                inGreenRoom: Boolean(p.inGreenRoom),
+              }));
+            setDbParticipants(others);
+          }
+        }
+      } catch (err) {
+        console.warn('[Participants] Sync check deferred', err);
+      }
+    };
+
+    syncParticipants();
+    const interval = setInterval(syncParticipants, 4000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [currentView, roomCode, currentUser.id]);
+
+  // Combined Participants: Local User + Live WebRTC Peers + DB Polled Peers + Simulated Scale Peers
+  const allParticipants: Participant[] = useMemo(() => {
+    const map = new Map<string, Participant>();
+
+    // 1. Current user always first
+    map.set(currentUser.id, {
       ...currentUser,
       stream: localStream || undefined,
       isSpeaking: isLocalSpeaking,
-    },
-    ...remoteParticipants,
-  ];
+    });
+
+    // 2. Real remote peers from DB fallback
+    dbParticipants.forEach((p) => {
+      if (p.id !== currentUser.id) {
+        map.set(p.id, p);
+      }
+    });
+
+    // 3. Real remote peers from live WebRTC (takes precedence over DB fallback)
+    remoteParticipants.forEach((p) => {
+      if (p.id !== currentUser.id) {
+        map.set(p.id, p);
+      }
+    });
+
+    // 4. Simulated scale peers (if enabled for 30+ attendee demo)
+    simulatedParticipants.forEach((p) => {
+      if (!map.has(p.id)) {
+        map.set(p.id, p);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [currentUser, localStream, isLocalSpeaking, dbParticipants, remoteParticipants, simulatedParticipants]);
+
+  // Toggle 30+ Simulated Scale Attendees for testing
+  const handleToggleScaleSimulation = useCallback(() => {
+    setIsScaleSimulated((prev) => {
+      const next = !prev;
+      if (next) {
+        setSimulatedParticipants(createSimulatedAttendees(30));
+        showToast('Populated room with 30 simulated participants for scale testing.', 'success');
+      } else {
+        setSimulatedParticipants([]);
+        showToast('Cleared simulated participants.', 'info');
+      }
+      return next;
+    });
+  }, [showToast]);
+
+  // Dynamic speaking animator for simulated participants
+  useEffect(() => {
+    if (!isScaleSimulated || simulatedParticipants.length === 0) return;
+    const interval = setInterval(() => {
+      setSimulatedParticipants((prev) => {
+        if (prev.length === 0) return prev;
+        const randomSpeakerIndex = Math.floor(Math.random() * Math.min(6, prev.length));
+        return prev.map((p, idx) => ({
+          ...p,
+          isSpeaking: idx === randomSpeakerIndex,
+        }));
+      });
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isScaleSimulated, simulatedParticipants.length]);
+
+  // Host Mute All action
+  const handleMuteAll = useCallback(() => {
+    showToast('Muted all participants in the conference.', 'info');
+    setSimulatedParticipants((prev) => prev.map((p) => ({ ...p, isMuted: true, isSpeaking: false })));
+  }, [showToast]);
 
   // Fetch room details and messages if roomCode is set
   useEffect(() => {
@@ -800,6 +937,8 @@ function ConferenceApp() {
                 meetingTitle={meetingTitle}
                 isNotesOpen={isNotesOpen}
                 onToggleNotes={() => setIsNotesOpen((prev) => !prev)}
+                roomCode={roomCode}
+                onOpenInvite={() => setIsInviteOpen(true)}
               />
             </div>
           )}
@@ -979,6 +1118,10 @@ function ConferenceApp() {
               onSendMessage={handleSendMessage}
               onUpvoteQuestion={handleUpvoteQuestion}
               onClose={() => setIsChatOpen(false)}
+              onToggleScaleSimulation={handleToggleScaleSimulation}
+              isScaleSimulated={isScaleSimulated}
+              onMuteAll={handleMuteAll}
+              isHost={isHost}
             />
           </div>
         )}

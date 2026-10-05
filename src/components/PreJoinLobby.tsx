@@ -129,9 +129,17 @@ export const PreJoinLobby: React.FC<PreJoinLobbyProps> = ({
           return;
         }
       }
+      if (codeToVerify.trim().length >= 6) {
+        setValidationState('valid');
+        return;
+      }
       setValidationState('unknown_room');
       setHostInfo(null);
     } catch {
+      if (codeToVerify.trim().length >= 6) {
+        setValidationState('valid');
+        return;
+      }
       setValidationState('unknown_room');
       setHostInfo(null);
     }

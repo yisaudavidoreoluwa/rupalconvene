@@ -641,6 +641,18 @@ export async function dbGetParticipants(roomId: string) {
   }));
 }
 
+export async function dbRemoveParticipant(roomId: string, userId: string) {
+  const supabase = getSupabaseServerClient();
+  if (supabase) {
+    await supabase.from('participants').delete().eq('room_id', roomId).eq('user_id', userId);
+    return;
+  }
+  const db = getDb();
+  if (!db) return;
+  const stmt = db.prepare('DELETE FROM participants WHERE room_id = ? AND user_id = ?');
+  stmt.run(roomId, userId);
+}
+
 // -------------------------------------------------------------
 // MESSAGES HELPERS
 // -------------------------------------------------------------

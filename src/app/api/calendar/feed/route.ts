@@ -83,3 +83,4 @@ END:VCALENDAR`;
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
