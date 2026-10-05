@@ -11,10 +11,16 @@ import {
   ShieldCheck, 
   ChevronDown, 
   RefreshCw,
-  LogIn
+  LogIn,
+  Calendar,
+  Sliders
 } from 'lucide-react';
 
-export function UserProfileMenu() {
+interface UserProfileMenuProps {
+  onOpenCalendarSettings?: () => void;
+}
+
+export function UserProfileMenu({ onOpenCalendarSettings }: UserProfileMenuProps = {}) {
   const { user, isAuthenticated, logout, loginWithProvider, openAuthModal, isLoading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -200,6 +206,19 @@ export function UserProfileMenu() {
 
           {/* Action Links */}
           <div className="px-2 pt-1.5 space-y-0.5">
+            {onOpenCalendarSettings && (
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenCalendarSettings();
+                }}
+                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 rounded-xl transition-colors font-medium cursor-pointer"
+              >
+                <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                <span>Calendar & Scheduling Settings</span>
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setIsOpen(false);

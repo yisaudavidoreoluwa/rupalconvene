@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -21,7 +21,13 @@ import {
 import { DeviceMockup } from './DeviceMockup';
 import { ConferenceCalendar } from './ConferenceCalendar';
 import { ScheduleMeetingModal } from './ScheduleMeetingModal';
-import { ScheduledConference, INITIAL_SCHEDULED_CONFERENCES } from '@/types/schedule';
+import { CalendarSettingsModal } from './CalendarSettingsModal';
+import { 
+  ScheduledConference, 
+  INITIAL_SCHEDULED_CONFERENCES,
+  UserCalendarSettings,
+  getDefaultCalendarSettings
+} from '@/types/schedule';
 import { useAuth } from '@/context/AuthContext';
 import { UserProfileMenu } from './UserProfileMenu';
 
@@ -37,10 +43,68 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenDocs,
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const userId = user?.id || 'guest_user';
 
-  // Schedule modal state
+  // Modal open states
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [scheduledConferences, setScheduledConferences] = useState<ScheduledConference[]>(INITIAL_SCHEDULED_CONFERENCES);
+  const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
+
+  // User-specific calendar settings
+  const [calendarSettings, setCalendarSettings] = useState<UserCalendarSettings>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`rupal_calendar_settings_${userId}`);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
+      }
+    }
+    return getDefaultCalendarSettings(userId);
+  });
+
+  // Scheduled conferences list
+  const [scheduledConferences, setScheduledConferences] = useState<ScheduledConference[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('rupal_scheduled_conferences');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch {}
+      }
+    }
+    return INITIAL_SCHEDULED_CONFERENCES;
+  });
+
+  // Sync calendar settings & conferences on user change or mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedSettings = localStorage.getItem(`rupal_calendar_settings_${userId}`);
+      if (storedSettings) {
+        try {
+          setCalendarSettings(JSON.parse(storedSettings));
+        } catch {}
+      } else {
+        setCalendarSettings(getDefaultCalendarSettings(userId));
+      }
+    }
+
+    // Attempt to fetch from backend API
+    fetch('/api/schedules')
+      .then(res => res.json())
+      .then(data => {
+        if (data.conferences && Array.isArray(data.conferences)) {
+          setScheduledConferences(prev => {
+            const map = new Map<string, ScheduledConference>();
+            INITIAL_SCHEDULED_CONFERENCES.forEach(c => map.set(c.id, c));
+            prev.forEach(c => map.set(c.id, c));
+            data.conferences.forEach((c: ScheduledConference) => map.set(c.id, c));
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch(() => {});
+  }, [userId]);
 
   // Quick join room input
   const [quickRoomCode, setQuickRoomCode] = useState('');
@@ -55,7 +119,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const handleMeetingScheduled = (newMeeting: ScheduledConference) => {
-    setScheduledConferences((prev) => [newMeeting, ...prev]);
+    setScheduledConferences((prev) => {
+      const updated = [newMeeting, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rupal_scheduled_conferences', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const handleDeleteConference = async (id: string) => {
+    setScheduledConferences(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rupal_scheduled_conferences', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    try {
+      await fetch(`/api/schedules?id=${id}`, { method: 'DELETE' });
+    } catch {}
   };
 
   return (
@@ -106,7 +190,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span>Enter Meeting Lobby</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-              <UserProfileMenu />
+              <UserProfileMenu onOpenCalendarSettings={() => setIsCalendarSettingsOpen(true)} />
             </div>
           ) : (
             <div className="flex items-center space-x-2">
@@ -240,6 +324,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           conferences={scheduledConferences}
           onScheduleClick={() => setIsScheduleOpen(true)}
           onJoinConference={(code, invite, title) => onJoinSpecificRoom(code, invite, title)}
+          onOpenSettings={() => setIsCalendarSettingsOpen(true)}
+          onDeleteConference={handleDeleteConference}
+          userCalendarSettings={calendarSettings}
         />
       </section>
 
@@ -405,6 +492,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         onMeetingScheduled={handleMeetingScheduled}
         onHostNow={(roomCode, title, inviteCode) => {
           onJoinSpecificRoom(roomCode, inviteCode, title);
+        }}
+        onOpenSettings={() => setIsCalendarSettingsOpen(true)}
+      />
+
+      {/* User Calendar Settings Modal */}
+      <CalendarSettingsModal
+        isOpen={isCalendarSettingsOpen}
+        onClose={() => setIsCalendarSettingsOpen(false)}
+        userConferences={scheduledConferences}
+        onSettingsSaved={(newSettings) => {
+          setCalendarSettings(newSettings);
         }}
       />
     </div>

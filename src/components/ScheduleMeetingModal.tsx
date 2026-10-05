@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Calendar as CalendarIcon, 
@@ -11,9 +11,18 @@ import {
   Copy, 
   ArrowRight,
   Download,
-  Users
+  Users,
+  Sliders,
+  ExternalLink,
+  Globe
 } from 'lucide-react';
-import { ScheduledConference } from '@/types/schedule';
+import { 
+  ScheduledConference, 
+  UserCalendarSettings, 
+  getDefaultCalendarSettings,
+  getGoogleCalendarLink,
+  getOutlookCalendarLink
+} from '@/types/schedule';
 import { useAuth } from '@/context/AuthContext';
 
 interface ScheduleMeetingModalProps {
@@ -21,6 +30,7 @@ interface ScheduleMeetingModalProps {
   onClose: () => void;
   onMeetingScheduled: (newMeeting: ScheduledConference) => void;
   onHostNow?: (roomCode: string, title: string, inviteCode: string) => void;
+  onOpenSettings?: () => void;
 }
 
 function generateRoomCode(): string {
@@ -41,21 +51,66 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
   onClose,
   onMeetingScheduled,
   onHostNow,
+  onOpenSettings,
 }) => {
   const { user } = useAuth();
+  const userId = user?.id || 'guest_user';
+
+  // Load user's saved calendar settings
+  const [calendarSettings, setCalendarSettings] = useState<UserCalendarSettings>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`rupal_calendar_settings_${userId}`);
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {}
+      }
+    }
+    return getDefaultCalendarSettings(userId);
+  });
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('2026-10-15');
+  
+  // Format tomorrow date as default YYYY-MM-DD
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
   const [time, setTime] = useState('14:00');
-  const [duration, setDuration] = useState(45);
-  const [category, setCategory] = useState<ScheduledConference['category']>('engineering');
-  const [enableNotes, setEnableNotes] = useState(true);
-  const [enableGreenRoom, setEnableGreenRoom] = useState(true);
+  const [duration, setDuration] = useState(calendarSettings.defaultDurationMinutes || 45);
+  const [category, setCategory] = useState<ScheduledConference['category']>(calendarSettings.defaultCategory || 'engineering');
+  const [enableNotes, setEnableNotes] = useState(calendarSettings.autoEnableNotes ?? true);
+  const [enableGreenRoom, setEnableGreenRoom] = useState(calendarSettings.autoEnableGreenRoom ?? true);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [scheduledResult, setScheduledResult] = useState<ScheduledConference | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Sync settings when modal opens or user changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`rupal_calendar_settings_${userId}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          setCalendarSettings(parsed);
+          setDuration(parsed.defaultDurationMinutes || 45);
+          setCategory(parsed.defaultCategory || 'engineering');
+          setEnableNotes(parsed.autoEnableNotes ?? true);
+          setEnableGreenRoom(parsed.autoEnableGreenRoom ?? true);
+          return;
+        } catch {}
+      }
+    }
+    const def = getDefaultCalendarSettings(userId);
+    setCalendarSettings(def);
+    setDuration(def.defaultDurationMinutes);
+    setCategory(def.defaultCategory);
+    setEnableNotes(def.autoEnableNotes);
+    setEnableGreenRoom(def.autoEnableGreenRoom);
+  }, [userId, isOpen]);
 
   if (!isOpen) return null;
 
@@ -78,14 +133,20 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
       hostName: user?.name || 'Meeting Host',
       hostAvatar: user?.avatar || '',
       hostRole: user?.jobTitle || 'Organizer',
+      hostId: user?.id || 'guest_user',
+      hostEmail: user?.email || '',
       roomCode,
       inviteCode,
       attendeesCount: 1,
       tags: [category.toUpperCase(), 'WebRTC', 'Encrypted'],
+      enableNotes,
+      enableGreenRoom,
+      timezone: calendarSettings.timezone,
+      createdAt: new Date().toISOString(),
     };
 
     try {
-      // Persist room to backend database
+      // 1. Persist room in rooms table
       await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -98,6 +159,13 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
           inviteCode,
           isInviteOnly: true,
         }),
+      });
+
+      // 2. Persist scheduled conference in schedules table
+      await fetch('/api/schedules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMeeting),
       });
     } catch (err) {
       console.warn('Backend room registration fallback:', err);
@@ -112,7 +180,7 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
     if (!scheduledResult) return;
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://rupalconvene.vercel.app';
     const link = `${origin}/?room=${scheduledResult.roomCode}&invite=${scheduledResult.inviteCode}`;
-    const text = `Scheduled Conference: "${scheduledResult.title}"\nDate: ${scheduledResult.date} at ${scheduledResult.time}\nRoom Code: ${scheduledResult.roomCode}\nInvite Code: ${scheduledResult.inviteCode}\nJoin Link: ${link}`;
+    const text = `Scheduled Conference: "${scheduledResult.title}"\nDate: ${scheduledResult.date} at ${scheduledResult.time} (${calendarSettings.timezone})\nRoom Code: ${scheduledResult.roomCode}\nInvite Code: ${scheduledResult.inviteCode}\nJoin Link: ${link}`;
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -153,7 +221,7 @@ END:VCALENDAR`;
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -170,7 +238,7 @@ END:VCALENDAR`;
                 Conference Scheduled!
               </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Your meeting has been added to the calendar and the secure 256-bit room is provisioned.
+                Saved to your personal calendar. Room is provisioned with 256-bit DTLS encryption.
               </p>
             </div>
 
@@ -182,7 +250,9 @@ END:VCALENDAR`;
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500 font-medium">Date & Time:</span>
-                <span className="font-bold text-blue-600">{scheduledResult.date} at {scheduledResult.time}</span>
+                <span className="font-bold text-blue-600">
+                  {scheduledResult.date} at {scheduledResult.time} ({calendarSettings.timezone})
+                </span>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500 font-medium">Room Code:</span>
@@ -194,11 +264,36 @@ END:VCALENDAR`;
               </div>
             </div>
 
+            {/* Quick Calendar Integration Links */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <a
+                href={getGoogleCalendarLink(scheduledResult)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-all border border-blue-200/60"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <span>Add to Google Cal</span>
+                <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
+              </a>
+
+              <a
+                href={getOutlookCalendarLink(scheduledResult)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center space-x-1.5 py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold transition-all border border-indigo-200/60"
+              >
+                <CalendarIcon className="w-3.5 h-3.5" />
+                <span>Add to Outlook</span>
+                <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
+              </a>
+            </div>
+
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 onClick={handleCopyLink}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center space-x-1.5"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
               >
                 {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                 <span>{copied ? 'Link Copied!' : 'Copy Invite Link'}</span>
@@ -206,10 +301,10 @@ END:VCALENDAR`;
 
               <button
                 onClick={handleDownloadIcs}
-                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center space-x-1.5"
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>Add to Calendar (.ics)</span>
+                <span>Download .ics</span>
               </button>
             </div>
 
@@ -220,7 +315,7 @@ END:VCALENDAR`;
                   onHostNow(scheduledResult.roomCode, scheduledResult.title, scheduledResult.inviteCode);
                   onClose();
                 }}
-                className="w-full py-3 px-4 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center space-x-1.5"
+                className="w-full py-3 px-4 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-md transition-all active:scale-95 flex items-center justify-center space-x-1.5 cursor-pointer"
               >
                 <span>Enter Room & Host Now</span>
                 <ArrowRight className="w-4 h-4" />
@@ -230,20 +325,58 @@ END:VCALENDAR`;
         ) : (
           /* 2. FORM VIEW */
           <div>
-            <div className="mb-5">
-              <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold mb-1.5">
-                <CalendarIcon className="w-3 h-3" />
-                <span>Meeting Host Scheduler</span>
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <div className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold mb-1">
+                  <CalendarIcon className="w-3 h-3" />
+                  <span>Meeting Host Scheduler</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-extrabold text-[#0f172a]">
+                  Schedule a Meeting
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Host for: <span className="font-semibold text-slate-800">{user?.name || 'Guest Organizer'}</span>
+                </p>
               </div>
-              <h3 className="text-lg sm:text-xl font-extrabold text-[#0f172a]">
-                Schedule a Meeting
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Reserve an upcoming conference slot and receive invite links.
-              </p>
+
+              {/* Quick Settings Shortcut */}
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenSettings();
+                  }}
+                  className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-semibold transition-colors cursor-pointer"
+                  title="Customize your calendar defaults"
+                >
+                  <Sliders className="w-3 h-3 text-slate-500" />
+                  <span>Defaults</span>
+                </button>
+              )}
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Timezone pill */}
+            <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-200/60 mb-3 text-[11px] text-slate-600">
+              <span className="flex items-center space-x-1.5 font-medium">
+                <Globe className="w-3 h-3 text-blue-600" />
+                <span>Timezone: {calendarSettings.timezone}</span>
+              </span>
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenSettings();
+                  }}
+                  className="text-blue-600 font-bold hover:underline cursor-pointer"
+                >
+                  Change
+                </button>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Meeting Title */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -252,7 +385,7 @@ END:VCALENDAR`;
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Distributed Edge Mesh Strategy Review"
+                  placeholder="e.g. Distributed Edge Mesh Architecture Review"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-[#0f172a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -267,7 +400,7 @@ END:VCALENDAR`;
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                 >
                   <option value="engineering">Architecture Sync & Engineering</option>
                   <option value="investor">Investor Syndicate & VC Review</option>
@@ -317,7 +450,7 @@ END:VCALENDAR`;
                       type="button"
                       key={d}
                       onClick={() => setDuration(d)}
-                      className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      className={`py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         duration === d
                           ? 'bg-[#0f172a] text-white shadow-xs'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
