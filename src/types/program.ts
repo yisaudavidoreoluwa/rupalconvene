@@ -26,8 +26,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'Competitive 24–48h developer build sprint',
     iconName: 'Zap',
     iconEmoji: '⚡',
-    accentColor: '#3b82f6',
-    badgeBg: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+    accentColor: '#2563eb',
+    badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
     defaultDurationMinutes: 1440, // 24h default
     highlightDescription: 'Built for high-energy sprints with live countdown clock, team breakout squads, project submission staging, and real-time judging leaderboards.',
     keyFeatures: ['24-48h Sprint Clock', 'Team Breakout Squads', 'Project Submission Portal', 'Live Judging Leaderboard']
@@ -38,8 +38,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'In-depth code labs and system tutorials',
     iconName: 'Wrench',
     iconEmoji: '🛠️',
-    accentColor: '#8b5cf6',
-    badgeBg: 'bg-purple-500/10 text-purple-600 border-purple-500/20',
+    accentColor: '#d97706',
+    badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
     defaultDurationMinutes: 120, // 2h default
     highlightDescription: 'Interactive coding tutorials with step-by-step lab instructions, 1-click code copying into the IDE, instructor checkpoint pushes, and TA help queue.',
     keyFeatures: ['Step-by-Step Code Labs', 'Copy-to-IDE Integration', 'Instructor Checkpoint Push', 'Mentor / TA Help Queue']
@@ -50,8 +50,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'Community tech gathering & lightning talks',
     iconName: 'Users',
     iconEmoji: '👥',
-    accentColor: '#10b981',
-    badgeBg: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+    accentColor: '#059669',
+    badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     defaultDurationMinutes: 90, // 1.5h default
     highlightDescription: 'Community gatherings featuring 5-minute lightning talk timers with visual warnings, speaker lineup management, community-upvoted Q&A, and virtual reactions.',
     keyFeatures: ['Lightning Talk Timer (5/10 min)', 'Speaker Lineup Queue', 'Upvoted Community Q&A', 'Virtual Applause & Soundboard']
@@ -62,8 +62,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'Global technical webinar or town hall',
     iconName: 'Radio',
     iconEmoji: '📡',
-    accentColor: '#f59e0b',
-    badgeBg: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+    accentColor: '#e11d48',
+    badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
     defaultDurationMinutes: 60, // 1h default
     highlightDescription: 'Webinar-scale broadcast with stage presenter vs audience separation, live interactive polls with real-time percentages, audience hand-raise promotion, and stream health metrics.',
     keyFeatures: ['Stage Presenters vs Audience', 'Live Audience Polling', 'Audience Stage Promotion', 'Live Stream Metrics HUD']
@@ -74,8 +74,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'Student training & career incubator',
     iconName: 'GraduationCap',
     iconEmoji: '🎓',
-    accentColor: '#ec4899',
-    badgeBg: 'bg-pink-500/10 text-pink-600 border-pink-500/20',
+    accentColor: '#4f46e5',
+    badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     defaultDurationMinutes: 180, // 3h default
     highlightDescription: 'Structured cohorts with student roll-call attendance check-in, curriculum syllabus module checklists, code review assignment submissions, and verifiable digital certificates.',
     keyFeatures: ['Roll Call & Attendance Check-in', 'Curriculum Module Tracker', 'Assignment Code Review', 'Certificate Generator']
@@ -86,8 +86,8 @@ export const PROGRAM_CATEGORIES_META: Record<ProgramCategory, ProgramCategoryMet
     subtitle: 'Executive symposium or industry tech day',
     iconName: 'Building2',
     iconEmoji: '🏢',
-    accentColor: '#0ea5e9',
-    badgeBg: 'bg-sky-500/10 text-sky-600 border-sky-500/20',
+    accentColor: '#0284c7',
+    badgeBg: 'bg-sky-50 text-sky-700 border-sky-200',
     defaultDurationMinutes: 75, // 1h 15m default
     highlightDescription: 'Enterprise architecture reviews with pre-loaded microservices blueprints for whiteboard, executive deal room document vault, hands-on-deck presenter handoff, and spec exports.',
     keyFeatures: ['Pre-loaded Whiteboard Topologies', 'Executive Deal Room & SLA Vault', 'Hands-on-Deck Presenter Baton', 'Architecture Spec Export']

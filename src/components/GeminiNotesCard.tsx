@@ -289,13 +289,13 @@ export const GeminiNotesCard: React.FC<GeminiNotesCardProps> = ({
             </div>
           </div>
 
-          {/* Action Button: Gradient Pill Button Matching Screenshot */}
+          {/* Action Button: Solid Blue Pill Button (No Purple) */}
           <button
             onClick={() => {
               setViewState('active');
               handleGenerateNotes();
             }}
-            className="w-full py-2.5 px-4 rounded-full bg-gradient-to-r from-[#4481eb] to-[#9b51e0] hover:opacity-95 active:scale-[0.98] text-white font-medium text-sm transition-all shadow-[0_4px_20px_rgba(68,129,235,0.35)] flex items-center justify-center space-x-1.5 cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-full bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-medium text-sm transition-all shadow-[0_4px_16px_rgba(37,99,235,0.3)] flex items-center justify-center space-x-1.5 cursor-pointer"
           >
             <span>Start taking notes</span>
           </button>

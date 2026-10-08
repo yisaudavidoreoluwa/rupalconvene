@@ -36,6 +36,34 @@ interface ProgramsHubModalProps {
   onOpenSchedule?: () => void;
 }
 
+const CATEGORY_ICONS: Record<ProgramCategory, React.ElementType> = {
+  hackathon: Zap,
+  workshop: Wrench,
+  meetup: Users,
+  broadcast: Radio,
+  bootcamp: GraduationCap,
+  'architecture-demo': Building2,
+};
+
+const CATEGORY_CARD_BORDERS: Record<ProgramCategory, string> = {
+  hackathon: 'border-2 border-blue-300 hover:border-blue-500',
+  workshop: 'border-2 border-amber-300 hover:border-amber-500',
+  meetup: 'border-2 border-emerald-300 hover:border-emerald-500',
+  broadcast: 'border-2 border-rose-300 hover:border-rose-500',
+  bootcamp: 'border-2 border-indigo-300 hover:border-indigo-500',
+  'architecture-demo': 'border-2 border-sky-300 hover:border-sky-500',
+};
+
+const FILTER_TABS: { id: 'all' | ProgramCategory; label: string; icon?: React.ElementType }[] = [
+  { id: 'all', label: 'All Programs' },
+  { id: 'hackathon', label: 'Hackathons', icon: Zap },
+  { id: 'workshop', label: 'Workshops', icon: Wrench },
+  { id: 'meetup', label: 'Meetups', icon: Users },
+  { id: 'broadcast', label: 'Broadcasts', icon: Radio },
+  { id: 'bootcamp', label: 'Bootcamps', icon: GraduationCap },
+  { id: 'architecture-demo', label: 'Demos', icon: Building2 },
+];
+
 function generateProgramRoomCode(cat: ProgramCategory): string {
   const num = Math.floor(100 + Math.random() * 900);
   const suffix = 
@@ -202,27 +230,23 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
 
                 {/* Filter Pills */}
                 <div className="flex items-center space-x-1.5 overflow-x-auto scrollbar-none pb-1 sm:pb-0 text-xs font-semibold">
-                  {[
-                    { id: 'all', label: 'All Programs' },
-                    { id: 'hackathon', label: '⚡ Hackathons' },
-                    { id: 'workshop', label: '🛠️ Workshops' },
-                    { id: 'meetup', label: '👥 Meetups' },
-                    { id: 'broadcast', label: '📡 Broadcasts' },
-                    { id: 'bootcamp', label: '🎓 Bootcamps' },
-                    { id: 'architecture-demo', label: '🏢 Demos' },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSelectedFilter(tab.id as any)}
-                      className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-colors cursor-pointer ${
-                        selectedFilter === tab.id
-                          ? 'bg-[#0f172a] text-white font-bold shadow-2xs'
-                          : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  {FILTER_TABS.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSelectedFilter(tab.id)}
+                        className={`px-3 py-1.5 rounded-xl whitespace-nowrap transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                          selectedFilter === tab.id
+                            ? 'bg-[#0f172a] text-white font-bold shadow-2xs'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {Icon && <Icon className="w-3.5 h-3.5" />}
+                        <span>{tab.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -236,16 +260,19 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
               ) : (
                 filteredPrograms.map((prog) => {
                   const meta = PROGRAM_CATEGORIES_META[prog.category];
+                  const CatIcon = CATEGORY_ICONS[prog.category] || Sparkles;
+                  const borderClass = CATEGORY_CARD_BORDERS[prog.category] || 'border-2 border-slate-200';
                   return (
                     <div
                       key={prog.id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between space-y-3"
+                      className={`p-5 rounded-2xl bg-white shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 ${borderClass}`}
                     >
                       <div>
                         {/* Top Badge & Room Code */}
                         <div className="flex items-center justify-between mb-2">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${meta.badgeBg}`}>
-                            {meta.iconEmoji} {meta.title}
+                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center space-x-1.5 ${meta.badgeBg}`}>
+                            <CatIcon className="w-3.5 h-3.5" />
+                            <span>{meta.title}</span>
                           </span>
                           <span className="font-mono text-xs text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
                             {prog.roomCode}

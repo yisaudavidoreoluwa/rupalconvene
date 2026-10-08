@@ -36,7 +36,7 @@ export const DEFAULT_HACKATHON_SQUADS: HackathonSquad[] = [
     membersCount: 4,
     projectTitle: 'Instant Visual Diff & Architecture Staging',
     track: 'Developer Experience',
-    avatarColor: 'bg-purple-600',
+    avatarColor: 'bg-indigo-600',
   },
   {
     id: 'squad-delta',
@@ -327,17 +327,7 @@ export const INITIAL_PROGRAMS: ConveneProgram[] = [
       labTitle: 'Building Resilient Media Streams & 30+ Peer Mesh',
       activeStepIndex: 1,
       steps: DEFAULT_WORKSHOP_STEPS,
-      helpRequests: [
-        {
-          id: 'help-1',
-          studentName: 'Alex Rivera',
-          studentAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=128&h=128&q=80',
-          stepNumber: 2,
-          question: 'Audio analyser is clipping on 128-byte frequency buffers. Can you check my fftSize config?',
-          requestedAt: '3m ago',
-          status: 'waiting',
-        }
-      ],
+      helpRequests: [],
     },
     createdAt: '2026-10-02T15:00:00Z',
   },

@@ -213,7 +213,7 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
         {onOpenProgramSuite && (
           <button
             onClick={onOpenProgramSuite}
-            className="px-2.5 py-1.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95 touch-manipulation"
+            className="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95 touch-manipulation"
             title="Open Program Suite (Hackathon, Workshop, Meetup, Broadcast, Bootcamp, Demo)"
           >
             <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />

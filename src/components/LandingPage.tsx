@@ -16,7 +16,11 @@ import {
   Play, 
   ExternalLink,
   ChevronRight,
-  Plus
+  Plus,
+  Wrench,
+  Radio,
+  GraduationCap,
+  Building2
 } from 'lucide-react';
 import { DeviceMockup } from './DeviceMockup';
 import { ConferenceCalendar } from './ConferenceCalendar';
@@ -240,9 +244,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </span>
         </div>
 
-        {/* Main Headline */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0f172a] max-w-4xl leading-[1.12]">
-          Ultra-Fast Video Conferences for <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600">Builders & Leaders</span>
+        {/* Main Headline with Gradient Hero Text (Item 3, No Purple) */}
+        <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight max-w-4xl leading-[1.12]">
+          <span className="text-[#0f172a]">Ultra-Fast Video Conferences for </span>
+          <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-700 via-blue-600 to-sky-500">
+            Builders & Leaders
+          </span>
         </h1>
 
         {/* Subtitle */}
@@ -271,11 +278,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span>Schedule a Meeting</span>
           </button>
 
-          {/* Programs & Hackathons Hub Button */}
+          {/* Programs & Hackathons Hub Button (Item 2: Solid blue, no purple gradient) */}
           {onOpenProgramsHub && (
             <button
               onClick={onOpenProgramsHub}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer border border-blue-500"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               <span>Explore Programs</span>
@@ -338,16 +345,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
         </div>
 
-        {/* 3x2 Grid matching user mockup */}
+        {/* 3x2 Grid with Colored Border Cards & Clean Lucide Icons (Items 5 & 6) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {/* Card 1: Hackathon */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-blue-300 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">⚡</span>
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-200 shadow-2xs">
+                  <Zap className="w-4 h-4 text-blue-600" />
+                </div>
                 <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
                   Hackathon
                 </span>
@@ -365,12 +374,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Card 2: Hands-on Workshop */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-amber-300 hover:border-amber-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">🛠️</span>
-                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-200 shadow-2xs">
+                  <Wrench className="w-4 h-4 text-amber-600" />
+                </div>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-amber-600 transition-colors">
                   Hands-on Workshop
                 </span>
               </div>
@@ -378,7 +389,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 In-depth code labs and system tutorials
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-amber-600">
               <span>Code lab steps & TA queue</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -387,12 +398,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Card 3: Developer Meetup */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-emerald-300 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">👥</span>
-                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200 shadow-2xs">
+                  <Users className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-emerald-600 transition-colors">
                   Developer Meetup
                 </span>
               </div>
@@ -400,7 +413,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Community tech gathering & lightning talks
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-emerald-600">
               <span>Lightning timer & Q&A</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -409,12 +422,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Card 4: Virtual Broadcast */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-rose-300 hover:border-rose-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">📡</span>
-                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-200 shadow-2xs">
+                  <Radio className="w-4 h-4 text-rose-600" />
+                </div>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-rose-600 transition-colors">
                   Virtual Broadcast
                 </span>
               </div>
@@ -422,7 +437,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Global technical webinar or town hall
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-rose-600">
               <span>Live polling & Stage control</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -431,12 +446,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Card 5: University Bootcamp */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-indigo-300 hover:border-indigo-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">🎓</span>
-                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-200 shadow-2xs">
+                  <GraduationCap className="w-4 h-4 text-indigo-600" />
+                </div>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-indigo-600 transition-colors">
                   University Bootcamp
                 </span>
               </div>
@@ -444,7 +461,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Student training & career incubator
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-indigo-600">
               <span>Roll-call & Certificates</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -453,12 +470,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Card 6: Architecture Demo */}
           <div
             onClick={onOpenProgramsHub}
-            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+            className="group relative p-5 bg-white rounded-2xl border-2 border-sky-300 hover:border-sky-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
           >
             <div>
-              <div className="flex items-center space-x-2.5 mb-2">
-                <span className="text-xl">🏢</span>
-                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+              <div className="flex items-center space-x-3 mb-2.5">
+                <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-200 shadow-2xs">
+                  <Building2 className="w-4 h-4 text-sky-600" />
+                </div>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-sky-600 transition-colors">
                   Architecture Demo
                 </span>
               </div>
@@ -466,7 +485,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Executive symposium or industry tech day
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-sky-600">
               <span>Topology injection & Vault</span>
               <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
             </div>
@@ -538,10 +557,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Feature 1 */}
-          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border-2 border-blue-200 hover:border-blue-400 flex flex-col justify-between">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 shadow-xs">
-                <Sparkles className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 border border-blue-100 shadow-xs">
+                <Sparkles className="w-6 h-6 text-blue-600" />
               </div>
               <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
                 Gemini AI "My Notes" Studio
@@ -557,10 +576,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 2 */}
-          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border-2 border-indigo-200 hover:border-indigo-400 flex flex-col justify-between">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 shadow-xs">
-                <Code className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 border border-indigo-100 shadow-xs">
+                <Code className="w-6 h-6 text-indigo-600" />
               </div>
               <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
                 Side-by-Side Collaborative IDE
@@ -576,10 +595,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 3 */}
-          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border-2 border-emerald-200 hover:border-emerald-400 flex flex-col justify-between">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 shadow-xs">
-                <Layout className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 border border-emerald-100 shadow-xs">
+                <Layout className="w-6 h-6 text-emerald-600" />
               </div>
               <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
                 Architectural Whiteboard & Slides
@@ -595,10 +614,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Feature 4 */}
-          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border border-slate-200/60 flex flex-col justify-between">
+          <div className="bg-white rounded-3xl p-7 shadow-sm hover:shadow-md transition-shadow border-2 border-slate-300 hover:border-slate-500 flex flex-col justify-between">
             <div>
-              <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4 shadow-xs">
-                <ShieldCheck className="w-6 h-6" />
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center mb-4 border border-slate-200 shadow-xs">
+                <ShieldCheck className="w-6 h-6 text-slate-800" />
               </div>
               <h3 className="text-base sm:text-lg font-bold text-[#0f172a]">
                 Invite-Only Security & Green Room
@@ -607,7 +626,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Stage keynotes and guest presenters in the backstage green room before admitting them to the main floor. Protected by cryptographic invite verification.
               </p>
             </div>
-            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-purple-600">
+            <div className="mt-5 pt-4 border-t border-slate-100 flex items-center text-xs font-bold text-slate-700">
               <span>Zero-trust meeting admittance</span>
               <ArrowRight className="w-3.5 h-3.5 ml-1" />
             </div>

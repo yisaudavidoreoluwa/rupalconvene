@@ -283,7 +283,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           {onOpenProgramSuite && (
             <button
               onClick={onOpenProgramSuite}
-              className="p-2.5 sm:p-3 rounded-full transition-all hidden md:inline-flex touch-manipulation bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xs active:scale-95 cursor-pointer ring-1 ring-white/20"
+              className="p-2.5 sm:p-3 rounded-full transition-all hidden md:inline-flex touch-manipulation bg-blue-600 hover:bg-blue-700 text-white shadow-xs active:scale-95 cursor-pointer ring-1 ring-white/20"
               title={`${activeProgramCategory ? activeProgramCategory.toUpperCase() : 'Program'} Suite Tools & Features`}
             >
               <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
@@ -367,7 +367,7 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
             className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs touch-manipulation ${
               activeTab === 'ai-intelligence'
                 ? 'bg-[#0f172a] text-white'
-                : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
             }`}
             title="Gemini Live Meeting Intelligence & Minutes"
           >

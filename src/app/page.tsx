@@ -1186,6 +1186,7 @@ function ConferenceApp() {
         activeCategory={activeProgramCategory}
         onChangeCategory={setActiveProgramCategory}
         currentUser={currentUser}
+        participants={allParticipants}
         isHost={isHost}
         onPasteCodeToIDE={handlePasteCodeToIDE}
         onLoadTopologyToWhiteboard={handleLoadTopologyToWhiteboard}

@@ -70,8 +70,8 @@ export const ProgramBanner: React.FC<ProgramBannerProps> = ({
         );
       case 'workshop':
         return (
-          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             <span>Step 2 of 4 • Code Lab Active</span>
           </span>
         );
@@ -84,15 +84,15 @@ export const ProgramBanner: React.FC<ProgramBannerProps> = ({
         );
       case 'broadcast':
         return (
-          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[11px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
             <span>342 Viewers Live • Active Poll</span>
           </span>
         );
       case 'bootcamp':
         return (
-          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[11px] font-semibold">
-            <CheckCircle2 className="w-3 h-3 text-pink-400" />
+          <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-semibold">
+            <CheckCircle2 className="w-3 h-3 text-indigo-400" />
             <span>Cohort #4 • 96% Checked In</span>
           </span>
         );
@@ -108,12 +108,12 @@ export const ProgramBanner: React.FC<ProgramBannerProps> = ({
 
   const getCategoryIcon = () => {
     switch (activeCategory) {
-      case 'hackathon': return <Zap className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />;
-      case 'workshop': return <Wrench className="w-3.5 h-3.5 text-purple-400" />;
+      case 'hackathon': return <Zap className="w-3.5 h-3.5 text-blue-400" />;
+      case 'workshop': return <Wrench className="w-3.5 h-3.5 text-amber-400" />;
       case 'meetup': return <Users className="w-3.5 h-3.5 text-emerald-400" />;
-      case 'broadcast': return <Radio className="w-3.5 h-3.5 text-sky-400" />;
-      case 'bootcamp': return <GraduationCap className="w-3.5 h-3.5 text-pink-400" />;
-      case 'architecture-demo': return <Building2 className="w-3.5 h-3.5 text-blue-400" />;
+      case 'broadcast': return <Radio className="w-3.5 h-3.5 text-rose-400" />;
+      case 'bootcamp': return <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />;
+      case 'architecture-demo': return <Building2 className="w-3.5 h-3.5 text-sky-400" />;
     }
   };
 
@@ -144,15 +144,15 @@ export const ProgramBanner: React.FC<ProgramBannerProps> = ({
           <select
             value={activeCategory}
             onChange={(e) => onChangeCategory(e.target.value as ProgramCategory)}
-            className="bg-[#181a20] border border-white/15 text-slate-300 text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer hidden md:inline-block"
+            className="bg-[#181a20] border border-white/15 text-slate-300 text-[11px] rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500 cursor-pointer hidden md:inline-block font-sans"
             title="Switch Program Mode for this conference"
           >
-            <option value="hackathon">⚡ Hackathon Mode</option>
-            <option value="workshop">🛠️ Hands-on Workshop</option>
-            <option value="meetup">👥 Developer Meetup</option>
-            <option value="broadcast">📡 Virtual Broadcast</option>
-            <option value="bootcamp">🎓 University Bootcamp</option>
-            <option value="architecture-demo">🏢 Architecture Demo</option>
+            <option value="hackathon">Hackathon Mode</option>
+            <option value="workshop">Hands-on Workshop</option>
+            <option value="meetup">Developer Meetup</option>
+            <option value="broadcast">Virtual Broadcast</option>
+            <option value="bootcamp">University Bootcamp</option>
+            <option value="architecture-demo">Architecture Demo</option>
           </select>
         )}
 

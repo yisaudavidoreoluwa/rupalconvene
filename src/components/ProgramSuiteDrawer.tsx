@@ -28,7 +28,17 @@ import {
   BarChart2,
   Award,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Flame,
+  Rocket,
+  Lightbulb,
+  Heart,
+  PartyPopper,
+  Hand,
+  Network,
+  Globe,
+  Lock,
+  Plus
 } from 'lucide-react';
 import { 
   ProgramCategory, 
@@ -62,6 +72,7 @@ interface ProgramSuiteDrawerProps {
   onChangeCategory?: (cat: ProgramCategory) => void;
   program?: ConveneProgram | null;
   currentUser: Participant;
+  participants?: Participant[];
   isHost?: boolean;
   onPasteCodeToIDE?: (code: string, fileName?: string) => void;
   onSendReaction?: (emoji: string) => void;
@@ -75,6 +86,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
   onChangeCategory,
   program,
   currentUser,
+  participants = [],
   isHost = false,
   onPasteCodeToIDE,
   onSendReaction,
@@ -91,7 +103,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
   }, [activeCategory]);
 
   // -------------------------------------------------------------
-  // 1. HACKATHON STATE
+  // 1. HACKATHON STATE (Synchronized with real room participants)
   // -------------------------------------------------------------
   const [squads, setSquads] = useState<HackathonSquad[]>(DEFAULT_HACKATHON_SQUADS);
   const [projects, setProjects] = useState<HackathonProject[]>(DEFAULT_HACKATHON_PROJECTS);
@@ -108,38 +120,63 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
   const [isSubmittingProject, setIsSubmittingProject] = useState(false);
   const [projectSubmitSuccess, setProjectSubmitSuccess] = useState(false);
 
+  // Sync real participants into Hackathon squads
+  useEffect(() => {
+    const list = participants && participants.length > 0 ? participants : [currentUser];
+    setSquads((prev) => {
+      return prev.map((squad, idx) => {
+        const member = list[idx % list.length];
+        return {
+          ...squad,
+          leadName: member ? member.name : (idx === 0 ? currentUser.name : squad.leadName),
+          membersCount: Math.max(1, Math.ceil(list.length / prev.length)),
+        };
+      });
+    });
+  }, [participants, currentUser]);
+
   // -------------------------------------------------------------
-  // 2. WORKSHOP STATE
+  // 2. WORKSHOP STATE (Real user-driven help requests)
   // -------------------------------------------------------------
   const [workshopSteps, setWorkshopSteps] = useState<WorkshopLabStep[]>(DEFAULT_WORKSHOP_STEPS);
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [copiedStepId, setCopiedStepId] = useState<string | null>(null);
-  const [helpRequests, setHelpRequests] = useState<MentorHelpRequest[]>([
-    {
-      id: 'req-1',
-      studentName: 'Alex Rivera',
-      studentAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=128&h=128&q=80',
-      stepNumber: 2,
-      question: 'Audio analyser is clipping on 128-byte frequency buffers. Can you check my fftSize config?',
-      requestedAt: '3m ago',
-      status: 'waiting',
-    }
-  ]);
+  const [helpRequests, setHelpRequests] = useState<MentorHelpRequest[]>([]);
   const [newHelpQuestion, setNewHelpQuestion] = useState('');
   const [checkpointPushed, setCheckpointPushed] = useState(false);
 
   // -------------------------------------------------------------
-  // 3. MEETUP STATE
+  // 3. MEETUP STATE (Synchronized with real attendees & Q&A)
   // -------------------------------------------------------------
-  const [meetupSpeakers, setMeetupSpeakers] = useState<MeetupSpeaker[]>(DEFAULT_MEETUP_SPEAKERS);
+  const [meetupSpeakers, setMeetupSpeakers] = useState<MeetupSpeaker[]>([]);
   const [lightningSeconds, setLightningSeconds] = useState(300); // 5 min
   const [isLightningRunning, setIsLightningRunning] = useState(false);
-  const [questions, setQuestions] = useState<{ id: string; user: string; text: string; upvotes: number; isAnswered: boolean }[]>([
-    { id: 'q-1', user: 'Liam O\'Connor', text: 'How do you handle ICE reconnection latency on mobile network handover?', upvotes: 14, isAnswered: true },
-    { id: 'q-2', user: 'Maya Lindqvist', text: 'Can active speaker auto-framing run client-side with WebAssembly?', upvotes: 21, isAnswered: false },
-    { id: 'q-3', user: 'Kenji Sato', text: 'What is the memory footprint of 30 peer connections on low-end laptops?', upvotes: 18, isAnswered: false },
-  ]);
+  const [questions, setQuestions] = useState<{ id: string; user: string; text: string; upvotes: number; isAnswered: boolean }[]>([]);
   const [newQuestionText, setNewQuestionText] = useState('');
+
+  // Sync real room participants into speakers lineup
+  useEffect(() => {
+    const list = participants && participants.length > 0 ? participants : [currentUser];
+    const TOPIC_BADGES = ['Architecture', 'Distributed Mesh', 'Zero-Latency AI', 'WebAssembly', 'Cloud Infra'];
+    const TALK_TITLES = [
+      'Welcome Keynote & Architectural Vision',
+      'Sub-second Serverless P2P Streaming',
+      'Building Low-Latency Real-Time Mesh',
+      'Deploying Autonomous AI Copilots',
+    ];
+    setMeetupSpeakers(
+      list.slice(0, 4).map((p, idx) => ({
+        id: `spk-${p.id}`,
+        name: p.name,
+        role: p.id === currentUser.id ? (isHost ? 'Keynote & Host' : 'Presenter') : (p.role === 'host' ? 'Host' : `Speaker ${idx + 1}`),
+        avatar: p.avatar,
+        talkTitle: TALK_TITLES[idx] || `Community Technical Lightning Session ${idx + 1}`,
+        topicBadge: TOPIC_BADGES[idx % TOPIC_BADGES.length],
+        durationMinutes: 5,
+        status: idx === 0 ? ('speaking' as const) : ('upcoming' as const),
+      }))
+    );
+  }, [participants, currentUser]);
 
   // -------------------------------------------------------------
   // 4. BROADCAST STATE
@@ -149,15 +186,37 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
   const [newPollOption1, setNewPollOption1] = useState('');
   const [newPollOption2, setNewPollOption2] = useState('');
   const [newPollOption3, setNewPollOption3] = useState('');
-  const [viewerCount] = useState(342);
+  const viewerCount = Math.max(participants.length || 1, 1);
 
   // -------------------------------------------------------------
-  // 5. BOOTCAMP STATE
+  // 5. BOOTCAMP STATE (Real roll call attendance from room participants)
   // -------------------------------------------------------------
-  const [attendance, setAttendance] = useState<BootcampAttendance[]>(DEFAULT_BOOTCAMP_ATTENDANCE);
+  const [attendance, setAttendance] = useState<BootcampAttendance[]>([]);
   const [modules, setModules] = useState<BootcampModule[]>(DEFAULT_BOOTCAMP_MODULES);
   const [certificateStudentName, setCertificateStudentName] = useState(currentUser.name);
   const [generatedCertificate, setGeneratedCertificate] = useState<BootcampCertificate | null>(null);
+
+  // Synchronize attendance from real room participants
+  useEffect(() => {
+    const list = participants && participants.length > 0 ? participants : [currentUser];
+    setAttendance((prev) => {
+      const existingMap = new Map(prev.map((a) => [a.studentId, a]));
+      return list.map((p, idx) => {
+        const existing = existingMap.get(p.id);
+        if (existing) return existing;
+        const isCurrent = p.id === currentUser.id;
+        return {
+          studentId: p.id,
+          studentName: p.name,
+          email: (p as any).email || `${p.name.toLowerCase().replace(/[^a-z0-9]/g, '.')}@convene.io`,
+          studentAvatar: p.avatar,
+          isCheckedIn: isCurrent,
+          checkInTime: isCurrent ? 'Present' : undefined,
+          progressPercent: Math.min(100, 75 + ((idx * 7) % 25)),
+        };
+      });
+    });
+  }, [participants, currentUser]);
 
   // -------------------------------------------------------------
   // 6. ARCHITECTURE DEMO STATE
@@ -299,6 +358,20 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
     setNewPollOption3('');
   };
 
+  const handleAddQuestion = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newQuestionText.trim()) return;
+    const newQ = {
+      id: `q-${Date.now()}`,
+      user: currentUser.name,
+      text: newQuestionText.trim(),
+      upvotes: 1,
+      isAnswered: false,
+    };
+    setQuestions((prev) => [newQ, ...prev]);
+    setNewQuestionText('');
+  };
+
   const handleToggleAttendance = (studentId: string) => {
     setAttendance((prev) =>
       prev.map((s) =>
@@ -356,20 +429,20 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
   };
 
   const checkedInCount = attendance.filter((a) => a.isCheckedIn).length;
-  const attendanceRate = Math.round((checkedInCount / attendance.length) * 100);
+  const attendanceRate = attendance.length > 0 ? Math.round((checkedInCount / attendance.length) * 100) : 100;
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[460px] md:w-[500px] bg-white shadow-2xl border-l border-slate-200 flex flex-col font-sans select-none animate-in slide-in-from-right duration-200">
       {/* 1. DRAWER HEADER */}
       <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
         <div className="flex items-center space-x-2.5">
-          <span className="p-2 rounded-xl bg-blue-50 text-blue-600">
-            {meta.id === 'hackathon' && <Zap className="w-5 h-5 fill-amber-500 text-amber-500" />}
-            {meta.id === 'workshop' && <Wrench className="w-5 h-5 text-purple-600" />}
+          <span className="p-2 rounded-xl bg-slate-100">
+            {meta.id === 'hackathon' && <Zap className="w-5 h-5 fill-blue-600 text-blue-600" />}
+            {meta.id === 'workshop' && <Wrench className="w-5 h-5 text-amber-600" />}
             {meta.id === 'meetup' && <Users className="w-5 h-5 text-emerald-600" />}
-            {meta.id === 'broadcast' && <Radio className="w-5 h-5 text-sky-600" />}
-            {meta.id === 'bootcamp' && <GraduationCap className="w-5 h-5 text-pink-600" />}
-            {meta.id === 'architecture-demo' && <Building2 className="w-5 h-5 text-blue-600" />}
+            {meta.id === 'broadcast' && <Radio className="w-5 h-5 text-rose-600" />}
+            {meta.id === 'bootcamp' && <GraduationCap className="w-5 h-5 text-indigo-600" />}
+            {meta.id === 'architecture-demo' && <Building2 className="w-5 h-5 text-sky-600" />}
           </span>
           <div>
             <h2 className="text-base font-extrabold text-[#0f172a] leading-tight">
@@ -433,7 +506,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('overview')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'overview' ? 'border-purple-600 text-purple-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'overview' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Code Lab Steps ({workshopSteps.length})
@@ -441,7 +514,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('mentor')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'mentor' ? 'border-purple-600 text-purple-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'mentor' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               TA Help Queue ({helpRequests.length})
@@ -449,7 +522,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('instructor')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'instructor' ? 'border-purple-600 text-purple-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'instructor' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Instructor Push
@@ -489,7 +562,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                 activeSubTab === 'soundboard' ? 'border-emerald-600 text-emerald-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
-              Soundboard 👏
+              Soundboard
             </button>
           </>
         )}
@@ -499,7 +572,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('overview')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'overview' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'overview' ? 'border-rose-600 text-rose-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Live Polls ({polls.length})
@@ -507,7 +580,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('stage-mgmt')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'stage-mgmt' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'stage-mgmt' ? 'border-rose-600 text-rose-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Stage vs Audience
@@ -515,7 +588,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('stream-hud')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'stream-hud' ? 'border-amber-600 text-amber-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'stream-hud' ? 'border-rose-600 text-rose-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Stream Metrics HUD
@@ -528,7 +601,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('overview')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'overview' ? 'border-pink-600 text-pink-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'overview' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Attendance Roll Call
@@ -536,7 +609,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('curriculum')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'curriculum' ? 'border-pink-600 text-pink-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'curriculum' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Curriculum Modules
@@ -544,7 +617,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             <button
               onClick={() => setActiveSubTab('certificate')}
               className={`pb-2.5 px-2 border-b-2 transition-colors cursor-pointer whitespace-nowrap ${
-                activeSubTab === 'certificate' ? 'border-pink-600 text-pink-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
+                activeSubTab === 'certificate' ? 'border-indigo-600 text-indigo-600 font-bold' : 'border-transparent text-slate-500 hover:text-slate-900'
               }`}
             >
               Certificate Generator
@@ -626,25 +699,37 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                 </div>
 
                 {/* Hackathon Tracks & Rules */}
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="p-4 rounded-2xl bg-slate-50 border-2 border-blue-200/80 space-y-3">
                   <div className="text-xs font-extrabold text-[#0f172a] uppercase tracking-wider">
                     Official Hackathon Tracks ($50,000 Prize Pool)
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <span className="font-bold text-blue-600">🤖 AI Agents</span>
+                    <div className="p-2.5 rounded-xl bg-white border-2 border-blue-200 hover:border-blue-400 shadow-2xs transition-all">
+                      <span className="font-bold text-blue-600 flex items-center space-x-1.5">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Agents</span>
+                      </span>
                       <p className="text-[11px] text-slate-500 mt-0.5">Multi-agent developer workflows</p>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <span className="font-bold text-emerald-600">🌐 Distributed Mesh</span>
+                    <div className="p-2.5 rounded-xl bg-white border-2 border-emerald-200 hover:border-emerald-400 shadow-2xs transition-all">
+                      <span className="font-bold text-emerald-600 flex items-center space-x-1.5">
+                        <Network className="w-3.5 h-3.5" />
+                        <span>Distributed Mesh</span>
+                      </span>
                       <p className="text-[11px] text-slate-500 mt-0.5">WebRTC & P2P infrastructure</p>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <span className="font-bold text-purple-600">⚡ Developer Tools</span>
+                    <div className="p-2.5 rounded-xl bg-white border-2 border-indigo-200 hover:border-indigo-400 shadow-2xs transition-all">
+                      <span className="font-bold text-indigo-600 flex items-center space-x-1.5">
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Developer Tools</span>
+                      </span>
                       <p className="text-[11px] text-slate-500 mt-0.5">Zero-latency coding suites</p>
                     </div>
-                    <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
-                      <span className="font-bold text-amber-600">🔐 FinTech & Security</span>
+                    <div className="p-2.5 rounded-xl bg-white border-2 border-amber-200 hover:border-amber-400 shadow-2xs transition-all">
+                      <span className="font-bold text-amber-600 flex items-center space-x-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        <span>FinTech & Security</span>
+                      </span>
                       <p className="text-[11px] text-slate-500 mt-0.5">Zero-trust & DTLS paywalls</p>
                     </div>
                   </div>
@@ -659,7 +744,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   <span className="text-blue-600 font-bold">{squads.length} Teams</span>
                 </div>
                 {squads.map((squad) => (
-                  <div key={squad.id} className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-slate-300 transition-all flex items-center justify-between">
+                  <div key={squad.id} className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 shadow-2xs hover:border-blue-400 transition-all flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className={`w-9 h-9 rounded-xl ${squad.avatarColor} text-white font-extrabold flex items-center justify-center text-xs shadow-xs`}>
                         {squad.name.slice(6, 7) || 'S'}
@@ -674,7 +759,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                     </div>
                     <button
                       onClick={() => alert(`Joined ${squad.name} breakout table.`)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0f172a] font-bold text-xs transition-colors cursor-pointer"
+                      className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer"
                     >
                       Join Table
                     </button>
@@ -686,7 +771,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             {activeSubTab === 'submit' && (
               <form onSubmit={handleSubmitHackathonProject} className="space-y-3">
                 {projectSubmitSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-2">
+                  <div className="p-3 rounded-xl bg-emerald-50 border-2 border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>Project successfully submitted to the judging portal!</span>
                   </div>
@@ -772,10 +857,10 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   Official Judging Leaderboard
                 </div>
                 {projects.map((proj, idx) => (
-                  <div key={proj.id} className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                  <div key={proj.id} className="p-3.5 rounded-2xl bg-white border-2 border-blue-200 shadow-2xs hover:border-blue-400 transition-all space-y-2">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-2">
-                        <span className="w-6 h-6 rounded-full bg-slate-900 text-white font-extrabold text-xs flex items-center justify-center">
+                        <span className="w-6 h-6 rounded-full bg-[#0f172a] text-white font-extrabold text-xs flex items-center justify-center">
                           #{idx + 1}
                         </span>
                         <div>
@@ -821,7 +906,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-[#0f172a]">Interactive Code Lab Exercises</span>
-                  <span className="text-purple-600 font-bold">
+                  <span className="text-amber-600 font-bold">
                     {workshopSteps.filter((s) => s.isCompleted).length} / {workshopSteps.length} Completed
                   </span>
                 </div>
@@ -829,10 +914,10 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                 {workshopSteps.map((step, idx) => (
                   <div
                     key={step.id}
-                    className={`p-4 rounded-2xl border transition-all ${
+                    className={`p-4 rounded-2xl border-2 transition-all ${
                       idx === activeStepIndex
-                        ? 'bg-purple-50/40 border-purple-300 shadow-xs'
-                        : 'bg-white border-slate-200'
+                        ? 'bg-amber-50/40 border-amber-400 shadow-xs'
+                        : 'bg-white border-amber-200/80 hover:border-amber-300'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
@@ -842,7 +927,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                           className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                             step.isCompleted
                               ? 'bg-emerald-500 text-white'
-                              : 'border border-slate-300 hover:border-purple-500'
+                              : 'border border-slate-300 hover:border-amber-500'
                           }`}
                         >
                           {step.isCompleted && <Check className="w-3 h-3 stroke-[3]" />}
@@ -851,7 +936,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                           Step {step.stepNumber}: {step.title}
                         </h4>
                       </div>
-                      <span className="text-[10px] font-mono text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-mono text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded font-semibold">
                         {step.targetFile}
                       </span>
                     </div>
@@ -893,9 +978,9 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             {activeSubTab === 'mentor' && (
               <div className="space-y-4">
                 {/* Request Help Form */}
-                <form onSubmit={handleRequestHelp} className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 space-y-2.5">
-                  <div className="text-xs font-bold text-purple-900 flex items-center space-x-1.5">
-                    <HelpCircle className="w-4 h-4 text-purple-600" />
+                <form onSubmit={handleRequestHelp} className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-2.5">
+                  <div className="text-xs font-bold text-amber-900 flex items-center space-x-1.5">
+                    <HelpCircle className="w-4 h-4 text-amber-600" />
                     <span>Request TA / Mentor Lab Assistance</span>
                   </div>
                   <input
@@ -904,11 +989,11 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                     placeholder="Describe what error or blocker you're facing..."
                     value={newHelpQuestion}
                     onChange={(e) => setNewHelpQuestion(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-purple-200 focus:outline-none focus:border-purple-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-amber-300 focus:outline-none focus:border-amber-500"
                   />
                   <button
                     type="submit"
-                    className="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                    className="w-full py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
                     Raise Hand for TA Help
                   </button>
@@ -919,43 +1004,55 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Waiting TA Queue ({helpRequests.length})
                   </div>
-                  {helpRequests.map((req) => (
-                    <div key={req.id} className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-start justify-between">
-                      <div className="flex items-start space-x-2.5 min-w-0">
-                        <img src={req.studentAvatar} alt={req.studentName} className="w-7 h-7 rounded-full object-cover mt-0.5" />
-                        <div>
-                          <div className="text-xs font-bold text-[#0f172a]">{req.studentName} (Step {req.stepNumber})</div>
-                          <p className="text-xs text-slate-600 mt-0.5 leading-snug">{req.question}</p>
-                          <span className="text-[10px] text-slate-400">{req.requestedAt}</span>
-                        </div>
+                  {helpRequests.length === 0 ? (
+                    <div className="p-6 rounded-2xl bg-amber-50/40 border-2 border-amber-200 text-center space-y-2">
+                      <div className="w-10 h-10 mx-auto rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                        <HelpCircle className="w-5 h-5" />
                       </div>
-                      <button
-                        onClick={() => setHelpRequests((prev) => prev.filter((r) => r.id !== req.id))}
-                        className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer whitespace-nowrap"
-                      >
-                        Resolve
-                      </button>
+                      <h4 className="text-xs font-bold text-[#0f172a]">No Active Help Requests</h4>
+                      <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                        All participants are progressing through the code lab! Use the form above if you need 1-on-1 assistance.
+                      </p>
                     </div>
-                  ))}
+                  ) : (
+                    helpRequests.map((req) => (
+                      <div key={req.id} className="p-3 rounded-2xl bg-white border-2 border-amber-200 hover:border-amber-300 shadow-2xs flex items-start justify-between">
+                        <div className="flex items-start space-x-2.5 min-w-0">
+                          <img src={req.studentAvatar} alt={req.studentName} className="w-7 h-7 rounded-full object-cover mt-0.5" />
+                          <div>
+                            <div className="text-xs font-bold text-[#0f172a]">{req.studentName} (Step {req.stepNumber})</div>
+                            <p className="text-xs text-slate-600 mt-0.5 leading-snug">{req.question}</p>
+                            <span className="text-[10px] text-slate-400">{req.requestedAt}</span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setHelpRequests((prev) => prev.filter((r) => r.id !== req.id))}
+                          className="px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold hover:bg-emerald-100 transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          Resolve
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
 
             {activeSubTab === 'instructor' && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-amber-200 space-y-3">
                 <div className="text-xs font-bold text-[#0f172a]">Instructor Code Checkpoint Broadcast</div>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   As the workshop instructor, you can broadcast the clean working solution for the active step directly into all attendees' Code Workspaces with a single click.
                 </p>
                 {checkpointPushed && (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-1.5">
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Checkpoint successfully pushed to all 38 participants!</span>
+                    <span>Checkpoint successfully pushed to all {Math.max(participants.length, 1)} participants!</span>
                   </div>
                 )}
                 <button
                   onClick={handlePushCheckpoint}
-                  className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center space-x-1.5"
+                  className="w-full py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center space-x-1.5 shadow-xs"
                 >
                   <Sparkles className="w-4 h-4" />
                   <span>Push Current Code Checkpoint to All Students</span>
@@ -973,7 +1070,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             {activeSubTab === 'overview' && (
               <div className="space-y-4">
                 {/* Radial Lightning Timer */}
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 text-white text-center shadow-lg">
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-400/40 text-white text-center shadow-lg">
                   <div className="text-xs font-bold text-emerald-300 uppercase tracking-wider mb-2">
                     Lightning Talk Speech Timer
                   </div>
@@ -981,7 +1078,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                     {formatTime(lightningSeconds)}
                   </div>
                   <div className="text-xs text-slate-300 font-medium mb-3">
-                    Speaking: <span className="font-bold text-white">Sarah Chen (Sub-second Serverless P2P)</span>
+                    Speaking: <span className="font-bold text-white">{meetupSpeakers[0]?.name || currentUser.name} ({meetupSpeakers[0]?.talkTitle || 'Keynote Presentation'})</span>
                   </div>
                   <div className="flex items-center justify-center space-x-2">
                     <button
@@ -1009,7 +1106,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   Scheduled Lightning Talks Lineup
                 </div>
                 {meetupSpeakers.map((spk) => (
-                  <div key={spk.id} className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                  <div key={spk.id} className="p-3 rounded-2xl bg-white border-2 border-emerald-200 hover:border-emerald-400 shadow-2xs transition-all flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                       <img src={spk.avatar} alt={spk.name} className="w-9 h-9 rounded-full object-cover" />
                       <div>
@@ -1037,45 +1134,82 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                 <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                   Community-Upvoted Q&A
                 </div>
-                {questions.map((q) => (
-                  <div key={q.id} className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-start justify-between">
-                    <div className="space-y-1 pr-2">
-                      <div className="text-[11px] font-bold text-slate-500">{q.user}</div>
-                      <p className="text-xs text-[#0f172a] leading-relaxed">{q.text}</p>
+
+                {/* Submit New Question */}
+                <form onSubmit={handleAddQuestion} className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ask a question for the speakers..."
+                    value={newQuestionText}
+                    onChange={(e) => setNewQuestionText(e.target.value)}
+                    className="flex-1 px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors flex items-center space-x-1 cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Ask</span>
+                  </button>
+                </form>
+
+                {questions.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-emerald-50/40 border-2 border-emerald-200 text-center space-y-2">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                      <Users className="w-5 h-5" />
                     </div>
-                    <button
-                      onClick={() => setQuestions((prev) => prev.map((item) => item.id === q.id ? { ...item, upvotes: item.upvotes + 1 } : item))}
-                      className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer flex-shrink-0"
-                    >
-                      <ThumbsUp className="w-3 h-3" />
-                      <span>{q.upvotes}</span>
-                    </button>
+                    <h4 className="text-xs font-bold text-[#0f172a]">No Audience Questions Yet</h4>
+                    <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                      Be the first to submit a question for the lightning talk speakers above!
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  questions.map((q) => (
+                    <div key={q.id} className="p-3 rounded-2xl bg-white border-2 border-emerald-200 hover:border-emerald-300 shadow-2xs flex items-start justify-between">
+                      <div className="space-y-1 pr-2">
+                        <div className="text-[11px] font-bold text-slate-500">{q.user}</div>
+                        <p className="text-xs text-[#0f172a] leading-relaxed">{q.text}</p>
+                      </div>
+                      <button
+                        onClick={() => setQuestions((prev) => prev.map((item) => item.id === q.id ? { ...item, upvotes: item.upvotes + 1 } : item))}
+                        className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold transition-colors cursor-pointer flex-shrink-0"
+                      >
+                        <ThumbsUp className="w-3 h-3" />
+                        <span>{q.upvotes}</span>
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 
             {activeSubTab === 'soundboard' && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-emerald-200 space-y-3">
                 <div className="text-xs font-bold text-[#0f172a]">Live Audience Reaction Soundboard</div>
                 <div className="grid grid-cols-2 gap-2.5">
                   {[
-                    { emoji: '👏', label: 'Applause' },
-                    { emoji: '🎉', label: 'Cheer' },
-                    { emoji: '🔥', label: 'Fire Talk' },
-                    { emoji: '🚀', label: 'Shipped' },
-                    { emoji: '💡', label: 'Great Idea' },
-                    { emoji: '❤️', label: 'Love It' },
-                  ].map((s) => (
-                    <button
-                      key={s.emoji}
-                      onClick={() => onSendReaction?.(s.emoji)}
-                      className="p-3 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 flex items-center space-x-2 text-xs font-bold text-[#0f172a] transition-all active:scale-95 shadow-2xs cursor-pointer"
-                    >
-                      <span className="text-xl">{s.emoji}</span>
-                      <span>{s.label}</span>
-                    </button>
-                  ))}
+                    { icon: Sparkles, label: 'Applause', color: 'border-amber-300 text-amber-700 hover:bg-amber-50' },
+                    { icon: PartyPopper, label: 'Cheer', color: 'border-blue-300 text-blue-700 hover:bg-blue-50' },
+                    { icon: Flame, label: 'Fire Talk', color: 'border-rose-300 text-rose-700 hover:bg-rose-50' },
+                    { icon: Rocket, label: 'Shipped', color: 'border-indigo-300 text-indigo-700 hover:bg-indigo-50' },
+                    { icon: Lightbulb, label: 'Great Idea', color: 'border-yellow-300 text-yellow-700 hover:bg-yellow-50' },
+                    { icon: Heart, label: 'Love It', color: 'border-red-300 text-red-700 hover:bg-red-50' },
+                  ].map((s) => {
+                    const Icon = s.icon;
+                    return (
+                      <button
+                        key={s.label}
+                        onClick={() => onSendReaction?.(s.label)}
+                        className={`p-3 rounded-xl bg-white border-2 flex items-center space-x-2.5 text-xs font-bold transition-all active:scale-95 shadow-2xs cursor-pointer ${s.color}`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <span>{s.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1091,11 +1225,11 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-[#0f172a]">Active Audience Polls</span>
-                  <span className="text-amber-600 font-bold">{viewerCount} Viewers Participating</span>
+                  <span className="text-rose-600 font-bold">{viewerCount} Viewers Participating</span>
                 </div>
 
                 {polls.map((poll) => (
-                  <div key={poll.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2.5">
+                  <div key={poll.id} className="p-4 rounded-2xl bg-white border-2 border-rose-200 hover:border-rose-300 shadow-2xs space-y-2.5">
                     <h4 className="text-xs font-extrabold text-[#0f172a] leading-snug">
                       {poll.question}
                     </h4>
@@ -1108,12 +1242,12 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                             key={opt.id}
                             type="button"
                             onClick={() => handleVotePoll(poll.id, opt.id)}
-                            className={`w-full p-2.5 rounded-xl border text-left text-xs font-semibold relative overflow-hidden transition-all cursor-pointer ${
-                              isVoted ? 'border-amber-500 bg-amber-50/50' : 'border-slate-200 hover:border-slate-300'
+                            className={`w-full p-2.5 rounded-xl border-2 text-left text-xs font-semibold relative overflow-hidden transition-all cursor-pointer ${
+                              isVoted ? 'border-rose-500 bg-rose-50/50' : 'border-slate-200 hover:border-rose-300'
                             }`}
                           >
                             <div
-                              className="absolute inset-y-0 left-0 bg-amber-200/40 transition-all duration-500"
+                              className="absolute inset-y-0 left-0 bg-rose-200/50 transition-all duration-500"
                               style={{ width: `${pct}%` }}
                             />
                             <div className="relative z-10 flex items-center justify-between">
@@ -1130,32 +1264,34 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             )}
 
             {activeSubTab === 'stage-mgmt' && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-rose-200 space-y-3">
                 <div className="text-xs font-bold text-[#0f172a]">Stage Presenters vs Audience Viewers</div>
                 <p className="text-xs text-slate-600">
-                  Broadcast webinar mode isolates stage speakers from the general audience to conserve bandwidth for 300+ attendees.
+                  Broadcast webinar mode isolates stage speakers from the general audience to conserve bandwidth for high-capacity rooms.
                 </p>
-                <div className="p-3 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
+                <div className="p-3.5 rounded-xl bg-white border-2 border-rose-200 space-y-2.5 text-xs">
                   <div className="font-bold text-slate-700">Active Keynote Speakers:</div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>David Kim (VP Technology Strategy)</span>
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
+                    <span className="font-semibold text-slate-800">{currentUser.name} {isHost ? '(Host & Keynote Lead)' : '(Presenter)'}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span>Elena Rostova (Keynote Guest)</span>
-                  </div>
+                  {participants.filter((p) => p.id !== currentUser.id).slice(0, 3).map((p) => (
+                    <div key={p.id} className="flex items-center space-x-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-200" />
+                      <span className="font-semibold text-slate-800">{p.name} (Keynote Co-Presenter)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {activeSubTab === 'stream-hud' && (
-              <div className="p-4 rounded-2xl bg-[#0f172a] text-white space-y-3 shadow-lg">
-                <div className="text-xs font-bold text-amber-400">Live Broadcast Telemetry HUD</div>
+              <div className="p-4 rounded-2xl bg-[#0f172a] text-white space-y-3 shadow-lg border-2 border-rose-400/30">
+                <div className="text-xs font-bold text-rose-400">Live Broadcast Telemetry HUD</div>
                 <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <div className="p-2 rounded-lg bg-white/5">
                     <div className="text-[10px] text-slate-400">Total Viewers</div>
-                    <div className="text-lg font-bold text-white">342 Live</div>
+                    <div className="text-lg font-bold text-white">{viewerCount} Live</div>
                   </div>
                   <div className="p-2 rounded-lg bg-white/5">
                     <div className="text-[10px] text-slate-400">Stream Health</div>
@@ -1182,15 +1318,15 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
           <>
             {activeSubTab === 'overview' && (
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 text-white flex items-center justify-between shadow-md">
+                <div className="p-4 rounded-2xl bg-[#0f172a] border-2 border-indigo-400/30 text-white flex items-center justify-between shadow-md">
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-wider opacity-90">Cohort Attendance</div>
+                    <div className="text-xs font-bold uppercase tracking-wider text-indigo-300">Cohort Attendance</div>
                     <div className="text-2xl font-extrabold mt-0.5">{attendanceRate}% Present</div>
-                    <div className="text-[11px] opacity-90">{checkedInCount} of {attendance.length} students checked in</div>
+                    <div className="text-[11px] text-slate-300">{checkedInCount} of {attendance.length} students checked in</div>
                   </div>
                   <button
                     onClick={handleExportAttendanceCSV}
-                    className="px-3 py-1.5 rounded-xl bg-white text-pink-700 font-bold text-xs transition-colors hover:bg-slate-100 flex items-center space-x-1 cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors flex items-center space-x-1 cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Export CSV</span>
@@ -1202,7 +1338,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                     Student Roll Call Register
                   </div>
                   {attendance.map((stu) => (
-                    <div key={stu.studentId} className="p-2.5 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                    <div key={stu.studentId} className="p-2.5 rounded-2xl bg-white border-2 border-indigo-200 hover:border-indigo-400 shadow-2xs transition-all flex items-center justify-between">
                       <div className="flex items-center space-x-2.5">
                         <img src={stu.studentAvatar} alt={stu.studentName} className="w-8 h-8 rounded-full object-cover" />
                         <div>
@@ -1212,13 +1348,20 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                       </div>
                       <button
                         onClick={() => handleToggleAttendance(stu.studentId)}
-                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors cursor-pointer flex items-center space-x-1 ${
                           stu.isCheckedIn
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-300'
                             : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                         }`}
                       >
-                        {stu.isCheckedIn ? `✓ Present (${stu.checkInTime})` : 'Mark Present'}
+                        {stu.isCheckedIn ? (
+                          <>
+                            <Check className="w-3 h-3 stroke-[3]" />
+                            <span>Present ({stu.checkInTime || 'Checked'})</span>
+                          </>
+                        ) : (
+                          <span>Mark Present</span>
+                        )}
                       </button>
                     </div>
                   ))}
@@ -1232,7 +1375,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   Curriculum Module Progression
                 </div>
                 {modules.map((mod) => (
-                  <div key={mod.id} className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1.5">
+                  <div key={mod.id} className="p-3.5 rounded-2xl bg-white border-2 border-indigo-200 hover:border-indigo-400 shadow-2xs transition-all space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#0f172a]">
                         Module {mod.moduleNumber}: {mod.title}
@@ -1257,29 +1400,29 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
 
             {activeSubTab === 'certificate' && (
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <div className="p-4 rounded-2xl bg-slate-50 border-2 border-indigo-200 space-y-2.5">
                   <div className="text-xs font-bold text-[#0f172a]">Generate Verified Completion Certificate</div>
                   <input
                     type="text"
                     placeholder="Student Full Name"
                     value={certificateStudentName}
                     onChange={(e) => setCertificateStudentName(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-pink-500"
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-white border border-slate-200 focus:outline-none focus:border-indigo-500"
                   />
                   <button
                     onClick={handleGenerateCertificate}
-                    className="w-full py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-xs transition-colors cursor-pointer"
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors cursor-pointer"
                   >
                     Generate Verified Certificate
                   </button>
                 </div>
 
                 {generatedCertificate && (
-                  <div className="p-4 rounded-2xl border-2 border-pink-400 bg-white shadow-xl text-center space-y-2 relative">
-                    <div className="w-10 h-10 mx-auto rounded-full bg-pink-100 text-pink-600 flex items-center justify-center">
+                  <div className="p-4 rounded-2xl border-2 border-indigo-500 bg-white shadow-xl text-center space-y-2 relative">
+                    <div className="w-10 h-10 mx-auto rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center">
                       <Award className="w-6 h-6" />
                     </div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-pink-600">Rupal Convene Academy</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">Rupal Convene Academy</div>
                     <h3 className="text-base font-extrabold text-[#0f172a]">Certificate of Completion</h3>
                     <p className="text-xs text-slate-500">This certifies that</p>
                     <div className="text-sm font-bold text-blue-600">{generatedCertificate.studentName}</div>
@@ -1307,7 +1450,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                 </div>
 
                 {loadedTopologyMsg && (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-1.5">
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-300 text-emerald-800 text-xs font-bold flex items-center space-x-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>{loadedTopologyMsg}</span>
                   </div>
@@ -1333,10 +1476,10 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                     nodes: 7,
                   },
                 ].map((topo) => (
-                  <div key={topo.id} className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                  <div key={topo.id} className="p-3.5 rounded-2xl bg-white border-2 border-sky-300 hover:border-sky-500 shadow-2xs transition-all space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-[#0f172a]">{topo.title}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-bold">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 font-bold border border-sky-200">
                         {topo.nodes} Nodes
                       </span>
                     </div>
@@ -1363,7 +1506,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
                   { title: 'SOC2 Type II Security Compliance Audit Report', size: '5.1 MB', type: 'PDF' },
                   { title: 'Zero-Trust WebRTC DTLS-SRTP Cryptographic Whitepaper', size: '3.8 MB', type: 'PDF' },
                 ].map((doc) => (
-                  <div key={doc.title} className="p-3 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between">
+                  <div key={doc.title} className="p-3 rounded-2xl bg-white border-2 border-sky-200 hover:border-sky-400 shadow-2xs transition-all flex items-center justify-between">
                     <div className="flex items-center space-x-2.5">
                       <FileText className="w-5 h-5 text-blue-600" />
                       <div>
@@ -1383,7 +1526,7 @@ export const ProgramSuiteDrawer: React.FC<ProgramSuiteDrawerProps> = ({
             )}
 
             {activeSubTab === 'spec-export' && (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <div className="p-4 rounded-2xl bg-slate-50 border-2 border-sky-200 space-y-3">
                 <div className="text-xs font-bold text-[#0f172a]">Architecture Specification Exporter</div>
                 <p className="text-xs text-slate-600 leading-relaxed">
                   Export complete system specifications, node schemas, and latency benchmarks formulated during this Architecture Demo.
