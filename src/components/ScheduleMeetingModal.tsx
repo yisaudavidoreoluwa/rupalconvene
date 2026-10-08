@@ -24,6 +24,8 @@ import {
   getOutlookCalendarLink
 } from '@/types/schedule';
 import { useAuth } from '@/context/AuthContext';
+import { ProgramCategorySelector } from '@/components/ProgramCategorySelector';
+import { ProgramCategory } from '@/types/program';
 
 interface ScheduleMeetingModalProps {
   isOpen: boolean;
@@ -392,22 +394,13 @@ END:VCALENDAR`;
                 />
               </div>
 
-              {/* Category / Occasion Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Meeting Type / Occasion
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as any)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-[#0f172a] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                >
-                  <option value="engineering">Architecture Sync & Engineering</option>
-                  <option value="investor">Investor Syndicate & VC Review</option>
-                  <option value="keynote">Keynote Summit / All Hands</option>
-                  <option value="product">Product Launch / Live Demo</option>
-                  <option value="general">General Team Sync</option>
-                </select>
+              {/* Exact Program Category 3x2 Selector from Mockup */}
+              <div className="pt-1">
+                <ProgramCategorySelector
+                  selectedCategory={(category as ProgramCategory) || 'hackathon'}
+                  onSelectCategory={(cat) => setCategory(cat)}
+                  showHeader={true}
+                />
               </div>
 
               {/* Date & Time Row */}

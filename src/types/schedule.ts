@@ -5,7 +5,7 @@ export interface ScheduledConference {
   date: string; // YYYY-MM-DD
   time: string; // HH:MM (24h)
   durationMinutes: number;
-  category: 'keynote' | 'engineering' | 'investor' | 'product' | 'general';
+  category: 'keynote' | 'engineering' | 'investor' | 'product' | 'general' | 'hackathon' | 'workshop' | 'meetup' | 'broadcast' | 'bootcamp' | 'architecture-demo';
   hostName: string;
   hostAvatar?: string;
   hostRole?: string;
@@ -29,7 +29,7 @@ export interface UserCalendarSettings {
   workingDays: number[]; // [1, 2, 3, 4, 5] (Monday - Friday)
   defaultDurationMinutes: number; // 15, 30, 45, 60
   bufferMinutes: number; // 0, 5, 10, 15
-  defaultCategory: 'keynote' | 'engineering' | 'investor' | 'product' | 'general';
+  defaultCategory: 'keynote' | 'engineering' | 'investor' | 'product' | 'general' | 'hackathon' | 'workshop' | 'meetup' | 'broadcast' | 'bootcamp' | 'architecture-demo';
   autoEnableNotes: boolean; // default true
   autoEnableGreenRoom: boolean; // default true
   notifyMinutesBefore: number; // 5, 10, 15, 30

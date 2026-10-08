@@ -12,7 +12,8 @@ import {
   Eye, 
   EyeOff, 
   ArrowLeft,
-  BookOpen
+  BookOpen,
+  Sparkles
 } from 'lucide-react';
 import { StageLayout, Participant } from '@/types/meeting';
 import { UserProfileMenu } from '@/components/UserProfileMenu';
@@ -31,6 +32,8 @@ interface ConferenceHeaderProps {
   onOpenInvite: () => void;
   onOpenDocs?: () => void;
   onBackToPortal?: () => void;
+  onOpenProgramSuite?: () => void;
+  activeProgramCategory?: string;
 }
 
 export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
@@ -47,6 +50,8 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
   onOpenInvite,
   onOpenDocs,
   onBackToPortal,
+  onOpenProgramSuite,
+  activeProgramCategory,
 }) => {
   const [copied, setCopied] = useState(false);
   // Meeting timer starts at 00:00 when the meeting begins
@@ -203,6 +208,18 @@ export const ConferenceHeader: React.FC<ConferenceHeaderProps> = ({
             <Maximize2 className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* Program Suite Button */}
+        {onOpenProgramSuite && (
+          <button
+            onClick={onOpenProgramSuite}
+            className="px-2.5 py-1.5 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer shadow-xs active:scale-95 touch-manipulation"
+            title="Open Program Suite (Hackathon, Workshop, Meetup, Broadcast, Bootcamp, Demo)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+            <span className="hidden sm:inline">Program Suite</span>
+          </button>
+        )}
 
         {/* Docs Button */}
         {onOpenDocs && (

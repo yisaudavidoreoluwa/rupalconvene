@@ -35,12 +35,14 @@ interface LandingPageProps {
   onProceedToLobby: (mode?: 'host' | 'join') => void;
   onJoinSpecificRoom: (roomCode: string, inviteCode?: string, title?: string) => void;
   onOpenDocs: () => void;
+  onOpenProgramsHub?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onProceedToLobby,
   onJoinSpecificRoom,
   onOpenDocs,
+  onOpenProgramsHub,
 }) => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
   const userId = user?.id || 'guest_user';
@@ -164,7 +166,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
 
         {/* Center Nav Links */}
-        <nav className="hidden md:flex items-center space-x-6 text-xs font-semibold text-slate-600">
+        <nav className="hidden md:flex items-center space-x-5 text-xs font-semibold text-slate-600">
+          <a href="#programs" className="hover:text-[#0f172a] transition-colors">
+            Program Categories
+          </a>
           <a href="#preview" className="hover:text-[#0f172a] transition-colors">
             Device Mockup
           </a>
@@ -174,6 +179,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <a href="#features" className="hover:text-[#0f172a] transition-colors">
             Workspace Tools
           </a>
+          {onOpenProgramsHub && (
+            <button
+              onClick={onOpenProgramsHub}
+              className="hover:text-blue-700 transition-colors cursor-pointer flex items-center space-x-1.5 text-blue-600 font-bold bg-blue-50 hover:bg-blue-100/70 px-3 py-1.5 rounded-full border border-blue-200/60 shadow-2xs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+              <span>Programs & Hackathons</span>
+            </button>
+          )}
           <button onClick={onOpenDocs} className="hover:text-[#0f172a] transition-colors cursor-pointer">
             Documentation
           </button>
@@ -228,7 +242,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         {/* Main Headline */}
         <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#0f172a] max-w-4xl leading-[1.12]">
-          Ultra-Fast Video Conferences for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">Builders & Leaders</span>
+          Ultra-Fast Video Conferences for <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600">Builders & Leaders</span>
         </h1>
 
         {/* Subtitle */}
@@ -237,7 +251,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </p>
 
         {/* Primary Action Button Cluster */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-md">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-xl">
           {/* Host Instant Meeting */}
           <button
             onClick={() => onProceedToLobby('host')}
@@ -256,6 +270,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <CalendarIcon className="w-4 h-4 text-blue-600" />
             <span>Schedule a Meeting</span>
           </button>
+
+          {/* Programs & Hackathons Hub Button */}
+          {onOpenProgramsHub && (
+            <button
+              onClick={onOpenProgramsHub}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-linear-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>Explore Programs</span>
+            </button>
+          )}
         </div>
 
         {/* Quick Join With Code Bar */}
@@ -293,6 +318,171 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <Sparkles className="w-4 h-4 text-purple-600" />
             <span>Automated AI Minutes</span>
           </div>
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* 2B. 6 PROGRAM CATEGORIES SHOWCASE                            */}
+      {/* ============================================================ */}
+      <section className="max-w-6xl mx-auto px-6 py-12" id="programs">
+        <div className="text-center max-w-2xl mx-auto mb-8">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-bold uppercase tracking-wider mb-2">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>Select Program Category</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
+            Tailored Engineering Suites for Every Program
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-500 mt-2">
+            Each category unlocks specialized in-call tools — sprint clocks, interactive code labs, lightning talk timers, live polls, verifiable certificates, and cloud topology loaders.
+          </p>
+        </div>
+
+        {/* 3x2 Grid matching user mockup */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {/* Card 1: Hackathon */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">⚡</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  Hackathon
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Competitive 24–48h developer build sprint
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Sprint clock & squads</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 2: Hands-on Workshop */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">🛠️</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  Hands-on Workshop
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                In-depth code labs and system tutorials
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Code lab steps & TA queue</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 3: Developer Meetup */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">👥</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  Developer Meetup
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Community tech gathering & lightning talks
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Lightning timer & Q&A</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 4: Virtual Broadcast */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">📡</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  Virtual Broadcast
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Global technical webinar or town hall
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Live polling & Stage control</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 5: University Bootcamp */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">🎓</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  University Bootcamp
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Student training & career incubator
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Roll-call & Certificates</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+
+          {/* Card 6: Architecture Demo */}
+          <div
+            onClick={onOpenProgramsHub}
+            className="group relative p-5 bg-white rounded-2xl border border-slate-200/80 hover:border-blue-500 hover:shadow-lg transition-all duration-200 cursor-pointer flex flex-col justify-between"
+          >
+            <div>
+              <div className="flex items-center space-x-2.5 mb-2">
+                <span className="text-xl">🏢</span>
+                <span className="text-sm font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">
+                  Architecture Demo
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Executive symposium or industry tech day
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-blue-600">
+              <span>Topology injection & Vault</span>
+              <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </div>
+        </div>
+
+        {/* View Programs Catalog CTA */}
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={onOpenProgramsHub}
+            className="px-6 py-3 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-sm flex items-center space-x-2 cursor-pointer active:scale-95"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>Open Programs & Cohorts Hub</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
         </div>
       </section>
 

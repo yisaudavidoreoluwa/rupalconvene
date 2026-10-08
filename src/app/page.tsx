@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { createSimulatedAttendees } from '@/lib/simulated-participants';
 import { PreJoinLobby } from '@/components/PreJoinLobby';
 import { LandingPage } from '@/components/LandingPage';
 import { ConferenceHeader } from '@/components/ConferenceHeader';
@@ -19,6 +18,10 @@ import { InviteModal } from '@/components/InviteModal';
 import { LeaveModal } from '@/components/LeaveModal';
 import { AuthModal } from '@/components/AuthModal';
 import { DocumentationModal } from '@/components/DocumentationModal';
+import { ProgramBanner } from '@/components/ProgramBanner';
+import { ProgramSuiteDrawer } from '@/components/ProgramSuiteDrawer';
+import { ProgramsHubModal } from '@/components/ProgramsHubModal';
+import { ProgramCategory } from '@/types/program';
 import { AuthProviderComponent, useAuth } from '@/context/AuthContext';
 import { getUserAvatar } from '@/lib/avatar';
 import { useWebRTC } from '@/hooks/useWebRTC';
@@ -98,6 +101,9 @@ function ConferenceApp() {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
+  const [isProgramSuiteOpen, setIsProgramSuiteOpen] = useState(false);
+  const [isProgramsHubOpen, setIsProgramsHubOpen] = useState(false);
+  const [activeProgramCategory, setActiveProgramCategory] = useState<ProgramCategory>('hackathon');
   const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'warn' } | null>(null);
 
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'warn' = 'info') => {
@@ -132,28 +138,37 @@ function ConferenceApp() {
     }
   ]);
 
-  // Gemini "My Notes" visibility state (closed by default to keep video stage clean & unobstructed)
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
-
-  // Participant synchronization & 30+ scale simulation
-  const [dbParticipants, setDbParticipants] = useState<Participant[]>([]);
-  const [isScaleSimulated, setIsScaleSimulated] = useState(false);
-  const [simulatedParticipants, setSimulatedParticipants] = useState<Participant[]>([]);
+  // Gemini "My Notes" visibility state (open by default to match reference image)
+  const [isNotesOpen, setIsNotesOpen] = useState(true);
 
   // Local media video reference for HTML5 <video> tag
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
 
-  // Auto-detect room code and invite passcode from URL query parameters (e.g. ?room=RUPAL-804-SYNC&invite=INV-04SYNC)
+  // Auto-detect room code, invite passcode, and program category from URL query parameters
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlRoom = params.get('room');
       const urlInvite = params.get('invite');
+      const urlProgram = params.get('program') as ProgramCategory | null;
+
       if (urlRoom && urlRoom.trim()) {
-        setRoomCode(urlRoom.trim().toUpperCase());
+        const code = urlRoom.trim().toUpperCase();
+        setRoomCode(code);
+        if (!urlProgram) {
+          if (code.includes('-HACK') || code.includes('HACK')) setActiveProgramCategory('hackathon');
+          else if (code.includes('-LABS') || code.includes('WORKSHOP') || code.includes('LAB')) setActiveProgramCategory('workshop');
+          else if (code.includes('-MEET') || code.includes('MEETUP')) setActiveProgramCategory('meetup');
+          else if (code.includes('-CAST') || code.includes('BROADCAST')) setActiveProgramCategory('broadcast');
+          else if (code.includes('-BOOT') || code.includes('BOOTCAMP')) setActiveProgramCategory('bootcamp');
+          else if (code.includes('-DEMO') || code.includes('ARCH')) setActiveProgramCategory('architecture-demo');
+        }
       }
       if (urlInvite && urlInvite.trim()) {
         setInviteCode(urlInvite.trim().toUpperCase());
+      }
+      if (urlProgram && ['hackathon', 'workshop', 'meetup', 'broadcast', 'bootcamp', 'architecture-demo'].includes(urlProgram)) {
+        setActiveProgramCategory(urlProgram);
       }
     }
   }, []);
@@ -354,146 +369,15 @@ function ConferenceApp() {
     }
   }, [localStream, currentView]);
 
-  // Register current user into the room's participant roster upon joining
-  useEffect(() => {
-    if (currentView === 'meeting' && roomCode && currentUser.id) {
-      fetch(`/api/rooms/${roomCode}/participants`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-          avatar: currentUser.avatar,
-        }),
-      }).catch((e) => console.warn('[Participants] Registration deferred:', e));
-
-      const handleUnload = () => {
-        navigator.sendBeacon?.(
-          `/api/rooms/${roomCode}/participants?userId=${encodeURIComponent(currentUser.id)}`
-        );
-      };
-      window.addEventListener('beforeunload', handleUnload);
-      return () => {
-        window.removeEventListener('beforeunload', handleUnload);
-      };
-    }
-  }, [currentView, roomCode, currentUser.id, currentUser.name, currentUser.role, currentUser.avatar]);
-
-  // Periodic REST poll for participants in the room (handles cross-tab and cross-device sync)
-  useEffect(() => {
-    if (currentView !== 'meeting' || !roomCode) return;
-    let isCancelled = false;
-
-    const syncParticipants = async () => {
-      try {
-        const res = await fetch(`/api/rooms/${roomCode}/participants`);
-        if (res.ok) {
-          const data = await res.json();
-          if (!isCancelled && data.success && Array.isArray(data.participants)) {
-            const others = data.participants
-              .filter((p: any) => p.userId !== currentUser.id)
-              .map((p: any) => ({
-                id: p.userId,
-                name: p.name,
-                email: '',
-                role: (p.role || 'developer') as Participant['role'],
-                avatar: p.avatar,
-                organization: 'Rupal Convene',
-                jobTitle: p.role === 'host' ? 'Meeting Host' : 'Engineer',
-                isMuted: Boolean(p.isMuted),
-                isVideoOff: Boolean(p.isVideoOff),
-                isSpeaking: false,
-                handRaised: false,
-                inGreenRoom: Boolean(p.inGreenRoom),
-              }));
-            setDbParticipants(others);
-          }
-        }
-      } catch (err) {
-        console.warn('[Participants] Sync check deferred', err);
-      }
-    };
-
-    syncParticipants();
-    const interval = setInterval(syncParticipants, 4000);
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-    };
-  }, [currentView, roomCode, currentUser.id]);
-
-  // Combined Participants: Local User + Live WebRTC Peers + DB Polled Peers + Simulated Scale Peers
-  const allParticipants: Participant[] = useMemo(() => {
-    const map = new Map<string, Participant>();
-
-    // 1. Current user always first
-    map.set(currentUser.id, {
+  // Combined Participants: Local User + Live Remote Peers across devices
+  const allParticipants: Participant[] = [
+    {
       ...currentUser,
       stream: localStream || undefined,
       isSpeaking: isLocalSpeaking,
-    });
-
-    // 2. Real remote peers from DB fallback
-    dbParticipants.forEach((p) => {
-      if (p.id !== currentUser.id) {
-        map.set(p.id, p);
-      }
-    });
-
-    // 3. Real remote peers from live WebRTC (takes precedence over DB fallback)
-    remoteParticipants.forEach((p) => {
-      if (p.id !== currentUser.id) {
-        map.set(p.id, p);
-      }
-    });
-
-    // 4. Simulated scale peers (if enabled for 30+ attendee demo)
-    simulatedParticipants.forEach((p) => {
-      if (!map.has(p.id)) {
-        map.set(p.id, p);
-      }
-    });
-
-    return Array.from(map.values());
-  }, [currentUser, localStream, isLocalSpeaking, dbParticipants, remoteParticipants, simulatedParticipants]);
-
-  // Toggle 30+ Simulated Scale Attendees for testing
-  const handleToggleScaleSimulation = useCallback(() => {
-    setIsScaleSimulated((prev) => {
-      const next = !prev;
-      if (next) {
-        setSimulatedParticipants(createSimulatedAttendees(30));
-        showToast('Populated room with 30 simulated participants for scale testing.', 'success');
-      } else {
-        setSimulatedParticipants([]);
-        showToast('Cleared simulated participants.', 'info');
-      }
-      return next;
-    });
-  }, [showToast]);
-
-  // Dynamic speaking animator for simulated participants
-  useEffect(() => {
-    if (!isScaleSimulated || simulatedParticipants.length === 0) return;
-    const interval = setInterval(() => {
-      setSimulatedParticipants((prev) => {
-        if (prev.length === 0) return prev;
-        const randomSpeakerIndex = Math.floor(Math.random() * Math.min(6, prev.length));
-        return prev.map((p, idx) => ({
-          ...p,
-          isSpeaking: idx === randomSpeakerIndex,
-        }));
-      });
-    }, 4500);
-    return () => clearInterval(interval);
-  }, [isScaleSimulated, simulatedParticipants.length]);
-
-  // Host Mute All action
-  const handleMuteAll = useCallback(() => {
-    showToast('Muted all participants in the conference.', 'info');
-    setSimulatedParticipants((prev) => prev.map((p) => ({ ...p, isMuted: true, isSpeaking: false })));
-  }, [showToast]);
+    },
+    ...remoteParticipants,
+  ];
 
   // Fetch room details and messages if roomCode is set
   useEffect(() => {
@@ -716,6 +600,54 @@ function ConferenceApp() {
     initLocalMedia();
   };
 
+  const handlePasteCodeToIDE = useCallback((code: string, fileName?: string) => {
+    const fileId = fileName ? fileName.toLowerCase().replace(/[^a-z0-9]/g, '-') : 'index-html';
+    setFiles((prev) => {
+      const existing = prev.find((f) => f.id === fileId || f.name === fileName);
+      if (existing) {
+        return prev.map((f) => (f.id === existing.id ? { ...f, content: code } : f));
+      } else {
+        const newFile: CodeFile = {
+          id: fileId,
+          name: fileName || 'lab-step.js',
+          language: fileName?.endsWith('.html') ? 'html' : fileName?.endsWith('.css') ? 'css' : fileName?.endsWith('.py') ? 'python' : 'javascript',
+          content: code,
+        };
+        return [...prev, newFile];
+      }
+    });
+    setActiveFileId(fileId);
+    setActiveTab('code-ide');
+    showToast(`Pasted lab code into ${fileName || 'IDE'}`, 'success');
+  }, [showToast]);
+
+  const handleLoadTopologyToWhiteboard = useCallback((topologyName: string) => {
+    let newElements: WhiteboardElement[] = [];
+    if (topologyName === 'kafka-cqrs') {
+      newElements = [
+        { id: `topo-${Date.now()}-1`, type: 'cloud', x: 80, y: 120, width: 140, height: 70, label: 'Command API', color: '#3b82f6' },
+        { id: `topo-${Date.now()}-2`, type: 'service', x: 280, y: 120, width: 140, height: 70, label: 'Kafka Broker', color: '#6366f1' },
+        { id: `topo-${Date.now()}-3`, type: 'database', x: 480, y: 120, width: 140, height: 70, label: 'Elasticsearch Read DB', color: '#10b981' },
+      ];
+    } else if (topologyName === 'zero-trust') {
+      newElements = [
+        { id: `topo-${Date.now()}-1`, type: 'cloud', x: 80, y: 120, width: 140, height: 70, label: 'Client Peer A', color: '#3b82f6' },
+        { id: `topo-${Date.now()}-2`, type: 'service', x: 280, y: 120, width: 140, height: 70, label: 'DTLS-SRTP Gateway', color: '#ec4899' },
+        { id: `topo-${Date.now()}-3`, type: 'cloud', x: 480, y: 120, width: 140, height: 70, label: 'Client Peer B', color: '#10b981' },
+      ];
+    } else {
+      newElements = [
+        { id: `topo-${Date.now()}-1`, type: 'cloud', x: 80, y: 100, width: 140, height: 70, label: 'Envoy Edge Gateway', color: '#3b82f6' },
+        { id: `topo-${Date.now()}-2`, type: 'service', x: 280, y: 60, width: 140, height: 70, label: 'Auth & Session Cluster', color: '#6366f1' },
+        { id: `topo-${Date.now()}-3`, type: 'service', x: 280, y: 180, width: 140, height: 70, label: 'Event Mesh Broker', color: '#f59e0b' },
+        { id: `topo-${Date.now()}-4`, type: 'database', x: 480, y: 120, width: 140, height: 70, label: 'CockroachDB Primary', color: '#10b981' },
+      ];
+    }
+    setWhiteboardElements((prev) => [...prev, ...newElements]);
+    setActiveTab('whiteboard');
+    showToast(`Injected ${topologyName} topology into Architecture Whiteboard`, 'success');
+  }, [showToast]);
+
   // 1. Landing Page View (Visitors & new users see this first before auth/lobby)
   if (currentView === 'landing') {
     return (
@@ -734,10 +666,23 @@ function ConferenceApp() {
             setCurrentView('lobby');
           }}
           onOpenDocs={() => setIsDocsOpen(true)}
+          onOpenProgramsHub={() => setIsProgramsHubOpen(true)}
         />
         <DocumentationModal
           isOpen={isDocsOpen}
           onClose={() => setIsDocsOpen(false)}
+        />
+        <ProgramsHubModal
+          isOpen={isProgramsHubOpen}
+          onClose={() => setIsProgramsHubOpen(false)}
+          onEnterProgramRoom={(code, invite, title, category) => {
+            setRoomCode(code);
+            setInviteCode(invite);
+            setActiveProgramCategory(category);
+            setMeetingTitle(title);
+            setCurrentView('lobby');
+            setIsProgramsHubOpen(false);
+          }}
         />
       </>
     );
@@ -778,6 +723,17 @@ function ConferenceApp() {
         <DocumentationModal
           isOpen={isDocsOpen}
           onClose={() => setIsDocsOpen(false)}
+        />
+        <ProgramsHubModal
+          isOpen={isProgramsHubOpen}
+          onClose={() => setIsProgramsHubOpen(false)}
+          onEnterProgramRoom={(code, invite, title, category) => {
+            setRoomCode(code);
+            setInviteCode(invite);
+            setActiveProgramCategory(category);
+            setMeetingTitle(title);
+            setIsProgramsHubOpen(false);
+          }}
         />
       </>
     );
@@ -849,6 +805,8 @@ function ConferenceApp() {
         onOpenInvite={() => setIsInviteOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
         onBackToPortal={() => setCurrentView('lobby')}
+        onOpenProgramSuite={() => setIsProgramSuiteOpen(true)}
+        activeProgramCategory={activeProgramCategory}
       />
 
       {/* Host Access Request Banner (Requirement 2 & 6) */}
@@ -916,8 +874,17 @@ function ConferenceApp() {
       )}
 
       {/* 2. Central Meeting Workspace */}
-      <div className="flex-1 flex overflow-hidden relative">
-        <div className={`flex-1 flex flex-col md:flex-row overflow-hidden relative ${
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+        {/* Live In-Meeting Program Banner (Sprint countdown, lightning timer, poll prompt, roll-call) */}
+        <ProgramBanner
+          activeCategory={activeProgramCategory}
+          onOpenSuite={() => setIsProgramSuiteOpen(true)}
+          onChangeCategory={setActiveProgramCategory}
+          isHost={isHost}
+        />
+
+        <div className="flex-1 flex overflow-hidden relative">
+          <div className={`flex-1 flex flex-col md:flex-row overflow-hidden relative ${
           activeTab === 'stage'
             ? 'p-0 bg-[#0a0c10]'
             : 'p-1.5 sm:p-2 md:p-3 gap-2 md:gap-3 bg-[#f8fafc]'
@@ -937,8 +904,6 @@ function ConferenceApp() {
                 meetingTitle={meetingTitle}
                 isNotesOpen={isNotesOpen}
                 onToggleNotes={() => setIsNotesOpen((prev) => !prev)}
-                roomCode={roomCode}
-                onOpenInvite={() => setIsInviteOpen(true)}
               />
             </div>
           )}
@@ -1118,13 +1083,10 @@ function ConferenceApp() {
               onSendMessage={handleSendMessage}
               onUpvoteQuestion={handleUpvoteQuestion}
               onClose={() => setIsChatOpen(false)}
-              onToggleScaleSimulation={handleToggleScaleSimulation}
-              isScaleSimulated={isScaleSimulated}
-              onMuteAll={handleMuteAll}
-              isHost={isHost}
             />
           </div>
         )}
+        </div>
       </div>
 
       {/* 3. Floating Bottom Controls Dock */}
@@ -1148,6 +1110,8 @@ function ConferenceApp() {
         roomCode={roomCode}
         onSendReaction={broadcastReaction}
         onToggleNotes={() => setIsNotesOpen((prev) => !prev)}
+        onOpenProgramSuite={() => setIsProgramSuiteOpen(true)}
+        activeProgramCategory={activeProgramCategory}
       />
 
       {/* Floating Live Emoji Reactions Overlay */}
@@ -1214,6 +1178,31 @@ function ConferenceApp() {
       <DocumentationModal
         isOpen={isDocsOpen}
         onClose={() => setIsDocsOpen(false)}
+      />
+
+      <ProgramSuiteDrawer
+        isOpen={isProgramSuiteOpen}
+        onClose={() => setIsProgramSuiteOpen(false)}
+        activeCategory={activeProgramCategory}
+        onChangeCategory={setActiveProgramCategory}
+        currentUser={currentUser}
+        isHost={isHost}
+        onPasteCodeToIDE={handlePasteCodeToIDE}
+        onLoadTopologyToWhiteboard={handleLoadTopologyToWhiteboard}
+        onSendReaction={broadcastReaction}
+      />
+
+      <ProgramsHubModal
+        isOpen={isProgramsHubOpen}
+        onClose={() => setIsProgramsHubOpen(false)}
+        onEnterProgramRoom={(code, invite, title, category) => {
+          setRoomCode(code);
+          setInviteCode(invite);
+          setActiveProgramCategory(category);
+          setMeetingTitle(title);
+          setIsProgramsHubOpen(false);
+          showToast(`Switched to program room ${code}`, 'success');
+        }}
       />
 
       {/* In-App Minimal Toast Overlay */}

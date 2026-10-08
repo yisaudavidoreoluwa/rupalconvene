@@ -40,6 +40,8 @@ interface ConferenceControlsProps {
   roomCode?: string;
   onSendReaction?: (emoji: string) => void;
   onToggleNotes?: () => void;
+  onOpenProgramSuite?: () => void;
+  activeProgramCategory?: string;
 }
 
 const EMOJI_LIST = ['❤️', '👏', '👍', '🔥', '🎉', '🚀'];
@@ -61,6 +63,8 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
   roomCode = 'RUPAL-804-SYNC',
   onSendReaction,
   onToggleNotes,
+  onOpenProgramSuite,
+  activeProgramCategory,
 }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showMobileTools, setShowMobileTools] = useState(false);
@@ -274,6 +278,17 @@ export const ConferenceControls: React.FC<ConferenceControlsProps> = ({
           >
             <Layout className="w-4 h-4" />
           </button>
+
+          {/* Program Suite (Hackathon / Workshop / Meetup / Broadcast / Bootcamp / Demo) */}
+          {onOpenProgramSuite && (
+            <button
+              onClick={onOpenProgramSuite}
+              className="p-2.5 sm:p-3 rounded-full transition-all hidden md:inline-flex touch-manipulation bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-xs active:scale-95 cursor-pointer ring-1 ring-white/20"
+              title={`${activeProgramCategory ? activeProgramCategory.toUpperCase() : 'Program'} Suite Tools & Features`}
+            >
+              <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+            </button>
+          )}
 
           {/* Hand Raise */}
           <button
