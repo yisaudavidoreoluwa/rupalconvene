@@ -143,15 +143,15 @@ END:VCALENDAR`;
   const getCategoryBadge = (category: ScheduledConference['category']) => {
     switch (category) {
       case 'keynote':
-        return { label: 'Keynote Summit', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+        return { label: 'Keynote Summit', color: 'bg-slate-100 text-[#0f172a] border-slate-200' };
       case 'investor':
-        return { label: 'Syndicate Review', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: 'Syndicate Review', color: 'bg-blue-50 text-blue-800 border-blue-200/80' };
       case 'engineering':
-        return { label: 'Architecture Sync', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: 'Architecture Sync', color: 'bg-slate-100 text-slate-800 border-slate-200' };
       case 'product':
-        return { label: 'Product Launch', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+        return { label: 'Product Launch', color: 'bg-blue-50 text-blue-800 border-blue-200/80' };
       default:
-        return { label: 'Conference', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+        return { label: 'Conference', color: 'bg-slate-100 text-slate-700 border-slate-200' };
     }
   };
 
@@ -160,14 +160,10 @@ END:VCALENDAR`;
       {/* Header with Title & Action */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between pb-6 gap-4 border-b border-slate-100">
         <div>
-          <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-bold mb-2">
-            <CalendarIcon className="w-3.5 h-3.5" />
-            <span>Official Conference & Events Calendar</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-[#0f172a] tracking-tight">
             Important Dates & Conferences
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-xl">
             Explore scheduled executive keynotes, engineering reviews, and investor syndicate sessions — or reserve your own room slot.
           </p>
         </div>
@@ -302,13 +298,7 @@ END:VCALENDAR`;
                         <span
                           key={idx}
                           className={`w-1.5 h-1.5 rounded-full ${
-                            isSelected
-                              ? 'bg-blue-400'
-                              : e.category === 'keynote'
-                              ? 'bg-purple-500'
-                              : e.category === 'investor'
-                              ? 'bg-emerald-500'
-                              : 'bg-blue-500'
+                            isSelected ? 'bg-blue-300' : 'bg-blue-600'
                           }`}
                         />
                       ))}
@@ -387,9 +377,7 @@ END:VCALENDAR`;
               return (
                 <div
                   key={conf.id}
-                  className={`bg-white rounded-3xl p-5 shadow-sm hover:shadow-md border transition-all flex flex-col justify-between ${
-                    isMyMeeting ? 'border-blue-300 ring-1 ring-blue-500/20' : 'border-slate-200/70'
-                  }`}
+                  className="bg-white rounded-3xl p-5 shadow-xs hover:shadow-md border border-slate-200 hover:border-slate-300 transition-all flex flex-col justify-between"
                 >
                   {/* Top Bar of Card */}
                   <div className="flex items-start justify-between gap-2 mb-2">

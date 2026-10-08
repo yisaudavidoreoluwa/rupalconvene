@@ -124,7 +124,7 @@ export const DeviceMockup: React.FC = () => {
             }`}
             title="Handheld mobile app view"
           >
-            <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+            <Smartphone className="w-3.5 h-3.5 text-blue-600" />
             <span>Mobile App</span>
           </button>
         </div>
@@ -146,7 +146,7 @@ export const DeviceMockup: React.FC = () => {
           <div className={`w-full transition-all duration-300 ${
             deviceView === 'dual' ? 'lg:col-span-8' : 'max-w-5xl'
           }`}>
-            <div className="rounded-3xl bg-white shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] border border-slate-200/90 overflow-hidden ring-1 ring-slate-900/5">
+            <div className="rounded-3xl bg-white shadow-[0_20px_60px_-15px_rgba(15,23,42,0.12)] border-2 border-slate-300 overflow-hidden">
               
               {/* macOS Browser Chrome Header */}
               <div className="h-12 bg-slate-100/90 border-b border-slate-200/80 px-4 flex items-center justify-between text-xs text-slate-500">
@@ -264,8 +264,8 @@ export const DeviceMockup: React.FC = () => {
                       <div>
                         <div className="flex items-center justify-between pb-2.5 border-b border-white/10">
                           <div className="flex items-center space-x-1.5">
-                            <div className="w-5 h-5 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-xs">
-                              <Sparkles className="w-3 h-3 text-cyan-200" />
+                            <div className="w-5 h-5 rounded-lg bg-blue-600 flex items-center justify-center shadow-xs">
+                              <Sparkles className="w-3 h-3 text-white" />
                             </div>
                             <span className="text-xs font-bold text-white tracking-tight">
                               Gemini 3.5 Notes
@@ -290,7 +290,7 @@ export const DeviceMockup: React.FC = () => {
                               </span>
                             </p>
                             <p className="flex items-start space-x-1.5">
-                              <span className="text-indigo-400 font-bold">•</span>
+                              <span className="text-blue-400 font-bold">•</span>
                               <span>
                                 <strong className="text-white font-semibold">Collaborative IDE:</strong> Multi-cursor syncing ready for browser release.
                               </span>
@@ -473,20 +473,20 @@ export const DeviceMockup: React.FC = () => {
                       </div>
 
                       {/* Node 2 */}
-                      <div className="p-3 rounded-2xl bg-[#161f30] text-white border border-emerald-500/40 shadow-xl text-center min-w-[120px]">
-                        <span className="text-[9px] font-extrabold text-emerald-400 uppercase tracking-wider block">
+                      <div className="p-3 rounded-2xl bg-[#161f30] text-white border border-blue-500/40 shadow-xl text-center min-w-[120px]">
+                        <span className="text-[9px] font-extrabold text-blue-400 uppercase tracking-wider block">
                           SFU Routing
                         </span>
                         <span className="text-xs font-bold text-slate-100">Anycast Cluster</span>
                       </div>
 
-                      <div className="text-purple-400 font-mono text-xs flex items-center space-x-1 animate-pulse">
+                      <div className="text-blue-400 font-mono text-xs flex items-center space-x-1 animate-pulse">
                         <span className="text-slate-500">────────▶</span>
                       </div>
 
                       {/* Node 3 */}
-                      <div className="p-3 rounded-2xl bg-[#161f30] text-white border border-purple-500/40 shadow-xl text-center min-w-[120px]">
-                        <span className="text-[9px] font-extrabold text-purple-400 uppercase tracking-wider block">
+                      <div className="p-3 rounded-2xl bg-[#161f30] text-white border border-slate-600/60 shadow-xl text-center min-w-[120px]">
+                        <span className="text-[9px] font-extrabold text-slate-300 uppercase tracking-wider block">
                           AI Engine
                         </span>
                         <span className="text-xs font-bold text-slate-100">Gemini 3.5 Realtime</span>
@@ -552,7 +552,7 @@ export const DeviceMockup: React.FC = () => {
           }`}>
             
             {/* Phone Outer Shell (iPhone 16 Pro Style Titanium Bezel) */}
-            <div className="relative w-[280px] sm:w-[300px] rounded-[48px] p-3 bg-[#1e232e] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] border-4 border-[#333a4a] ring-1 ring-white/10">
+            <div className="relative w-[280px] sm:w-[300px] rounded-[48px] p-3 bg-[#0f172a] shadow-[0_25px_60px_-15px_rgba(0,0,0,0.4)] border-2 border-slate-700 ring-1 ring-white/10">
               
               {/* Dynamic Island / Notch Sensor Bar */}
               <div className="absolute top-5 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-30 flex items-center justify-between px-2.5 shadow-md">
@@ -648,7 +648,7 @@ export const DeviceMockup: React.FC = () => {
                   {activeTab === 'whiteboard' && (
                     <div className="flex-1 flex flex-col justify-center items-center p-2">
                       <div className="w-full rounded-2xl bg-[#111726] border border-white/10 p-3 text-center space-y-2 shadow-md">
-                        <div className="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-300 flex items-center justify-center mx-auto border border-purple-500/30">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-300 flex items-center justify-center mx-auto border border-blue-500/30">
                           <Layout className="w-4 h-4" />
                         </div>
                         <span className="text-[10px] font-bold text-white block">

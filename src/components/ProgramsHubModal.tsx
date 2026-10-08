@@ -45,15 +45,6 @@ const CATEGORY_ICONS: Record<ProgramCategory, React.ElementType> = {
   'architecture-demo': Building2,
 };
 
-const CATEGORY_CARD_BORDERS: Record<ProgramCategory, string> = {
-  hackathon: 'border-2 border-blue-300 hover:border-blue-500',
-  workshop: 'border-2 border-amber-300 hover:border-amber-500',
-  meetup: 'border-2 border-emerald-300 hover:border-emerald-500',
-  broadcast: 'border-2 border-rose-300 hover:border-rose-500',
-  bootcamp: 'border-2 border-indigo-300 hover:border-indigo-500',
-  'architecture-demo': 'border-2 border-sky-300 hover:border-sky-500',
-};
-
 const FILTER_TABS: { id: 'all' | ProgramCategory; label: string; icon?: React.ElementType }[] = [
   { id: 'all', label: 'All Programs' },
   { id: 'hackathon', label: 'Hackathons', icon: Zap },
@@ -261,17 +252,16 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
                 filteredPrograms.map((prog) => {
                   const meta = PROGRAM_CATEGORIES_META[prog.category];
                   const CatIcon = CATEGORY_ICONS[prog.category] || Sparkles;
-                  const borderClass = CATEGORY_CARD_BORDERS[prog.category] || 'border-2 border-slate-200';
                   return (
                     <div
                       key={prog.id}
-                      className={`p-5 rounded-2xl bg-white shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 ${borderClass}`}
+                      className="p-5 rounded-2xl bg-white shadow-2xs hover:shadow-md transition-all flex flex-col justify-between space-y-3 border border-slate-200 hover:border-slate-300"
                     >
                       <div>
                         {/* Top Badge & Room Code */}
                         <div className="flex items-center justify-between mb-2">
                           <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border flex items-center space-x-1.5 ${meta.badgeBg}`}>
-                            <CatIcon className="w-3.5 h-3.5" />
+                            <CatIcon className="w-3.5 h-3.5 text-[#0f172a]" />
                             <span>{meta.title}</span>
                           </span>
                           <span className="font-mono text-xs text-slate-500 font-semibold bg-slate-50 px-2 py-0.5 rounded border border-slate-200/60">
