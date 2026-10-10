@@ -31,7 +31,7 @@ import { useAuth } from '@/context/AuthContext';
 
 interface ConferenceCalendarProps {
   conferences: ScheduledConference[];
-  onScheduleClick: () => void;
+  onScheduleClick: (date?: string) => void;
   onJoinConference: (roomCode: string, inviteCode?: string, title?: string) => void;
   onOpenSettings?: () => void;
   onDeleteConference?: (id: string) => void;
@@ -48,8 +48,8 @@ export const ConferenceCalendar: React.FC<ConferenceCalendarProps> = ({
 }) => {
   const { user } = useAuth();
 
-  // Current calendar view month/year: October 2026
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 9, 1)); // October 2026 (0-indexed month)
+  // Dynamic calendar view month/year based on real current date
+  const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -182,7 +182,7 @@ END:VCALENDAR`;
           )}
 
           <button
-            onClick={onScheduleClick}
+            onClick={() => onScheduleClick()}
             className="flex items-center space-x-2 px-5 py-2.5 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs sm:text-sm shadow-md transition-all active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -234,7 +234,7 @@ END:VCALENDAR`;
               </button>
               <button
                 onClick={() => {
-                  setCurrentDate(new Date(2026, 9, 1));
+                  setCurrentDate(new Date());
                   setSelectedDate(null);
                 }}
                 className="px-2.5 py-1 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
@@ -353,19 +353,30 @@ END:VCALENDAR`;
           </div>
 
           {filteredConferences.length === 0 ? (
-            <div className="bg-white rounded-3xl p-8 text-center border border-slate-200/70 shadow-sm">
-              <CalendarIcon className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-              <h4 className="font-bold text-sm text-[#0f172a]">No conferences found</h4>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
-                {selectedFilter === 'my-meetings'
-                  ? "You haven't scheduled any conferences yet. Schedule your first meeting to get invite links and calendar sync!"
-                  : "No events scheduled for the selected filter."}
+            <div className="bg-white rounded-3xl p-8 sm:p-10 text-center border border-slate-200/70 shadow-sm flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-[#0f172a] mb-3 border border-slate-200 shadow-2xs">
+                <CalendarIcon className="w-6 h-6 text-blue-600" />
+              </div>
+              <h4 className="font-extrabold text-base text-[#0f172a]">
+                {selectedDate 
+                  ? `No Events on ${selectedDate}` 
+                  : selectedFilter === 'my-meetings' 
+                  ? 'No Meetings Scheduled' 
+                  : 'Start Fresh — No Events Scheduled Yet'}
+              </h4>
+              <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                {selectedDate
+                  ? `There are no conferences booked for this date yet. Schedule a new meeting on ${selectedDate} to reserve your room.`
+                  : selectedFilter === 'my-meetings'
+                  ? "You haven't scheduled any conferences yet. Schedule your first meeting to get direct invite links and calendar sync!"
+                  : "All dummy placeholder events have been cleared. Schedule your first conference or meeting to generate invite links, room codes, and sync with your calendars."}
               </p>
               <button
-                onClick={onScheduleClick}
-                className="mt-4 px-5 py-2.5 rounded-full bg-[#0f172a] text-white text-xs font-bold hover:bg-[#1e293b] cursor-pointer shadow-xs"
+                onClick={() => onScheduleClick(selectedDate || undefined)}
+                className="mt-5 px-6 py-3 rounded-full bg-[#0f172a] text-white text-xs font-bold hover:bg-[#1e293b] cursor-pointer shadow-sm transition-all active:scale-95 flex items-center space-x-2"
               >
-                Schedule Meeting Now
+                <Plus className="w-4 h-4" />
+                <span>{selectedDate ? `Schedule Meeting on ${selectedDate}` : 'Schedule First Meeting'}</span>
               </button>
             </div>
           ) : (

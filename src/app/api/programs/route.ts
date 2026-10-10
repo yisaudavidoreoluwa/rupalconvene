@@ -3,7 +3,7 @@ import { ConveneProgram, ProgramCategory } from '@/types/program';
 import { INITIAL_PROGRAMS } from '@/lib/program-defaults';
 
 // In-memory runtime cache for created programs (persists during server lifetime)
-let activePrograms: ConveneProgram[] = [...INITIAL_PROGRAMS];
+let activePrograms: ConveneProgram[] = [];
 
 export async function GET(req: NextRequest) {
   try {

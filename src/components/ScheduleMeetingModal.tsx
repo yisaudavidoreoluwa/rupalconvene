@@ -33,6 +33,7 @@ interface ScheduleMeetingModalProps {
   onMeetingScheduled: (newMeeting: ScheduledConference) => void;
   onHostNow?: (roomCode: string, title: string, inviteCode: string) => void;
   onOpenSettings?: () => void;
+  initialDate?: string;
 }
 
 function generateRoomCode(): string {
@@ -54,6 +55,7 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
   onMeetingScheduled,
   onHostNow,
   onOpenSettings,
+  initialDate,
 }) => {
   const { user } = useAuth();
   const userId = user?.id || 'guest_user';
@@ -74,8 +76,9 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   
-  // Format tomorrow date as default YYYY-MM-DD
+  // Format tomorrow date or initialDate as default YYYY-MM-DD
   const [date, setDate] = useState(() => {
+    if (initialDate) return initialDate;
     const d = new Date();
     d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
@@ -90,8 +93,11 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
   const [scheduledResult, setScheduledResult] = useState<ScheduledConference | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Sync settings when modal opens or user changes
+  // Sync settings and initialDate when modal opens or user changes
   useEffect(() => {
+    if (initialDate) {
+      setDate(initialDate);
+    }
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(`rupal_calendar_settings_${userId}`);
       if (stored) {
@@ -112,7 +118,7 @@ export const ScheduleMeetingModal: React.FC<ScheduleMeetingModalProps> = ({
     setCategory(def.defaultCategory);
     setEnableNotes(def.autoEnableNotes);
     setEnableGreenRoom(def.autoEnableGreenRoom);
-  }, [userId, isOpen]);
+  }, [userId, isOpen, initialDate]);
 
   if (!isOpen) return null;
 

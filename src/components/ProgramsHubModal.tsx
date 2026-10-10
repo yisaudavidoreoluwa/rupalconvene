@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   X, 
   Search, 
@@ -73,7 +73,52 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
   onOpenSchedule,
 }) => {
   const { user } = useAuth();
-  const [programs, setPrograms] = useState<ConveneProgram[]>(INITIAL_PROGRAMS);
+  const [programs, setPrograms] = useState<ConveneProgram[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('rupal_user_programs');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter((p: any) => 
+              p && 
+              !p.id?.startsWith('prog-hackathon-2026') && 
+              !p.id?.startsWith('prog-workshop-webrtc') && 
+              !p.id?.startsWith('prog-meetup-cloud') && 
+              !p.id?.startsWith('prog-broadcast-summit') && 
+              !p.id?.startsWith('prog-bootcamp-cohort') && 
+              !p.id?.startsWith('prog-architecture-demo')
+            );
+            localStorage.setItem('rupal_user_programs', JSON.stringify(clean));
+            return clean;
+          }
+        } catch {}
+      }
+    }
+    return [];
+  });
+
+  // Fetch created programs from API
+  useEffect(() => {
+    fetch('/api/programs')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.programs)) {
+          setPrograms(prev => {
+            const map = new Map<string, ConveneProgram>();
+            prev.forEach(p => map.set(p.id, p));
+            data.programs.forEach((p: ConveneProgram) => map.set(p.id, p));
+            const list = Array.from(map.values());
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('rupal_user_programs', JSON.stringify(list));
+            }
+            return list;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const [selectedFilter, setSelectedFilter] = useState<'all' | ProgramCategory>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -116,40 +161,54 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
     });
   }, [programs, selectedFilter, searchQuery]);
 
-  const handleCreateProgram = (e: React.FormEvent) => {
+  const handleCreateProgram = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      const roomCode = generateProgramRoomCode(newCategory);
-      const inviteCode = `INV-${roomCode.slice(-6)}`;
-      const meta = PROGRAM_CATEGORIES_META[newCategory];
+    
+    const roomCode = generateProgramRoomCode(newCategory);
+    const inviteCode = `INV-${roomCode.slice(-6)}`;
+    const meta = PROGRAM_CATEGORIES_META[newCategory];
 
-      const newProg: ConveneProgram = {
-        id: `prog-${Date.now()}`,
-        roomCode,
-        inviteCode,
-        title: newTitle.trim() || `${meta.title} Program Session`,
-        description: newDescription.trim() || meta.highlightDescription,
-        category: newCategory,
-        hostId: user?.id || 'host-user',
-        hostName: user?.name || 'Program Lead',
-        hostRole: user?.jobTitle || 'Organizer',
-        hostAvatar: user?.avatar || '',
-        scheduledDate: newDate,
-        scheduledTime: newTime,
-        durationMinutes: newDuration,
-        status: 'scheduled',
-        tags: meta.keyFeatures,
-        attendeesCount: 1,
-        createdAt: new Date().toISOString(),
-      };
+    const newProg: ConveneProgram = {
+      id: `prog-${Date.now()}`,
+      roomCode,
+      inviteCode,
+      title: newTitle.trim() || `${meta.title} Program Session`,
+      description: newDescription.trim() || meta.highlightDescription,
+      category: newCategory,
+      hostId: user?.id || 'host-user',
+      hostName: user?.name || 'Program Lead',
+      hostRole: user?.jobTitle || 'Organizer',
+      hostAvatar: user?.avatar || '',
+      scheduledDate: newDate,
+      scheduledTime: newTime,
+      durationMinutes: newDuration,
+      status: 'scheduled',
+      tags: meta.keyFeatures,
+      attendeesCount: 1,
+      createdAt: new Date().toISOString(),
+    };
 
-      setPrograms((prev) => [newProg, ...prev]);
-      setIsSubmitting(false);
-      setViewMode('browse');
-      onEnterProgramRoom(roomCode, inviteCode, newProg.title, newCategory);
-      onClose();
-    }, 500);
+    setPrograms((prev) => {
+      const updated = [newProg, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('rupal_user_programs', JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    try {
+      await fetch('/api/programs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProg),
+      });
+    } catch {}
+
+    setIsSubmitting(false);
+    setViewMode('browse');
+    onEnterProgramRoom(roomCode, inviteCode, newProg.title, newCategory);
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -245,8 +304,21 @@ export const ProgramsHubModal: React.FC<ProgramsHubModalProps> = ({
             {/* Programs Grid */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredPrograms.length === 0 ? (
-                <div className="col-span-full text-center py-12 text-slate-400 text-xs">
-                  No programs found matching your filter criteria.
+                <div className="col-span-full text-center py-16 px-6 bg-white rounded-3xl border border-slate-200/80 shadow-2xs flex flex-col items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3 border border-blue-100 shadow-2xs">
+                    <Sparkles className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h4 className="font-extrabold text-base text-[#0f172a]">No Programs Created Yet</h4>
+                  <p className="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">
+                    Start fresh! Launch your own Hackathon sprint, Hands-on Workshop, Meetup, Broadcast, Bootcamp, or Architecture Demo.
+                  </p>
+                  <button
+                    onClick={() => setViewMode('create')}
+                    className="mt-5 px-6 py-2.5 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white text-xs font-bold transition-all shadow-xs flex items-center space-x-2 cursor-pointer active:scale-95"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Your First Program</span>
+                  </button>
                 </div>
               ) : (
                 filteredPrograms.map((prog) => {

@@ -33,6 +33,9 @@ export async function GET(req: NextRequest) {
           );
         `);
 
+        // Ensure legacy dummy records are cleaned out so users start fresh
+        db.exec(`DELETE FROM scheduled_conferences WHERE id LIKE 'conf-%';`);
+
         let query = 'SELECT * FROM scheduled_conferences ORDER BY date ASC, time ASC';
         let params: any[] = [];
         if (userId) {
@@ -73,12 +76,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Default fallback
-    const list = userId 
-      ? INITIAL_SCHEDULED_CONFERENCES.filter(c => c.hostId === userId)
-      : INITIAL_SCHEDULED_CONFERENCES;
-
-    return NextResponse.json({ conferences: list });
+    // Default clean fallback
+    return NextResponse.json({ conferences: [] });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

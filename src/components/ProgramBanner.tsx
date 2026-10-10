@@ -86,14 +86,14 @@ export const ProgramBanner: React.FC<ProgramBannerProps> = ({
         return (
           <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11px] font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-            <span>342 Viewers Live • Active Poll</span>
+            <span>{program?.attendeesCount ? `${program.attendeesCount} Viewers` : 'Broadcast Stage'} • Live Polling</span>
           </span>
         );
       case 'bootcamp':
         return (
           <span className="flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[11px] font-semibold">
             <CheckCircle2 className="w-3 h-3 text-blue-400" />
-            <span>Cohort #4 • 96% Checked In</span>
+            <span>{program?.title || 'Bootcamp Cohort'} • Roll-Call Active</span>
           </span>
         );
       case 'architecture-demo':

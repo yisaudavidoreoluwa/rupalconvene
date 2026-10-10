@@ -54,6 +54,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Modal open states
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
+  const [scheduleInitialDate, setScheduleInitialDate] = useState<string | undefined>(undefined);
 
   // User-specific calendar settings
   const [calendarSettings, setCalendarSettings] = useState<UserCalendarSettings>(() => {
@@ -68,18 +69,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     return getDefaultCalendarSettings(userId);
   });
 
-  // Scheduled conferences list
+  // Scheduled conferences list (clears out any old dummy conf- items to start fresh)
   const [scheduledConferences, setScheduledConferences] = useState<ScheduledConference[]>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('rupal_scheduled_conferences');
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter((c: any) => c && !c.id?.startsWith('conf-'));
+            localStorage.setItem('rupal_scheduled_conferences', JSON.stringify(clean));
+            return clean;
+          }
         } catch {}
       }
     }
-    return INITIAL_SCHEDULED_CONFERENCES;
+    return [];
   });
 
   // Sync calendar settings & conferences on user change or mount
@@ -95,22 +100,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       }
     }
 
-    // Attempt to fetch from backend API
+    // Fetch genuine user schedules from backend API
     fetch('/api/schedules')
       .then(res => res.json())
       .then(data => {
         if (data.conferences && Array.isArray(data.conferences)) {
           setScheduledConferences(prev => {
             const map = new Map<string, ScheduledConference>();
-            INITIAL_SCHEDULED_CONFERENCES.forEach(c => map.set(c.id, c));
-            prev.forEach(c => map.set(c.id, c));
-            data.conferences.forEach((c: ScheduledConference) => map.set(c.id, c));
-            return Array.from(map.values());
+            prev.filter(c => !c.id.startsWith('conf-')).forEach(c => map.set(c.id, c));
+            data.conferences.filter((c: ScheduledConference) => !c.id.startsWith('conf-')).forEach((c: ScheduledConference) => map.set(c.id, c));
+            const list = Array.from(map.values());
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('rupal_scheduled_conferences', JSON.stringify(list));
+            }
+            return list;
           });
         }
       })
       .catch(() => {});
   }, [userId]);
+
+  const handleOpenSchedule = (initialDate?: string) => {
+    setScheduleInitialDate(initialDate);
+    setIsScheduleOpen(true);
+  };
 
   // Quick join room input
   const [quickRoomCode, setQuickRoomCode] = useState('');
@@ -513,7 +526,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section className="max-w-6xl mx-auto px-6 py-16 sm:py-20" id="calendar">
         <ConferenceCalendar
           conferences={scheduledConferences}
-          onScheduleClick={() => setIsScheduleOpen(true)}
+          onScheduleClick={(date) => handleOpenSchedule(date)}
           onJoinConference={(code, invite, title) => onJoinSpecificRoom(code, invite, title)}
           onOpenSettings={() => setIsCalendarSettingsOpen(true)}
           onDeleteConference={handleDeleteConference}
@@ -676,12 +689,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Schedule Meeting Modal */}
       <ScheduleMeetingModal
         isOpen={isScheduleOpen}
-        onClose={() => setIsScheduleOpen(false)}
+        onClose={() => {
+          setIsScheduleOpen(false);
+          setScheduleInitialDate(undefined);
+        }}
         onMeetingScheduled={handleMeetingScheduled}
         onHostNow={(roomCode, title, inviteCode) => {
           onJoinSpecificRoom(roomCode, inviteCode, title);
         }}
         onOpenSettings={() => setIsCalendarSettingsOpen(true)}
+        initialDate={scheduleInitialDate}
       />
 
       {/* User Calendar Settings Modal */}

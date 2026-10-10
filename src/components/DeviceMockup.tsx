@@ -20,10 +20,18 @@ import {
   Pencil,
   Square,
   StickyNote,
-  FileCode
+  FileCode,
+  Volume2
 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export const DeviceMockup: React.FC = () => {
+  const { user } = useAuth();
+  const hostDisplayName = user?.name ? `${user.name.split(' ')[0]} (Host)` : 'Host (You)';
+  const hostInitials = user?.name 
+    ? user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+    : 'YOU';
+
   const [activeTab, setActiveTab] = useState<'video' | 'code' | 'whiteboard'>('video');
   const [deviceView, setDeviceView] = useState<'dual' | 'desktop' | 'mobile'>('dual');
   
@@ -186,19 +194,17 @@ export const DeviceMockup: React.FC = () => {
                 {activeTab === 'video' && (
                   <div className="relative flex-1 p-3 grid grid-cols-1 md:grid-cols-12 gap-3 h-full overflow-hidden">
                     
-                    {/* Left 65%: 2x2 Clean Video Grid (All 4 participants clear!) */}
+                    {/* Left 65%: 2x2 Clean Video Grid (Zero Dummy Images) */}
                     <div className="md:col-span-8 grid grid-cols-2 grid-rows-2 gap-2.5 h-full">
                       
-                      {/* 1. Top-Left: Active Speaker (Aarav Mehta) */}
-                      <div className="relative rounded-2xl overflow-hidden bg-[#111318] ring-2 ring-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.25)] flex items-center justify-center">
-                        <img
-                          src="/attendees/speaker-tl.png"
-                          alt="Aarav Mehta (Active Speaker)"
-                          className="w-full h-full object-cover"
-                        />
+                      {/* 1. Top-Left: Active Speaker Tile */}
+                      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#131b2e] via-[#0d1322] to-[#0a0f1a] ring-2 ring-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.25)] flex flex-col items-center justify-center">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-white font-extrabold text-base sm:text-lg shadow-inner">
+                          {hostInitials}
+                        </div>
                         {/* Name & Speaking Badge */}
                         <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-md text-white text-[11px] font-medium border border-white/10 flex items-center space-x-1.5 shadow-sm">
-                          <span>Aarav Mehta</span>
+                          <span>{hostDisplayName}</span>
                           <span className="text-emerald-400 font-bold text-[10px] flex items-center">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse" />
                             Speaking
@@ -212,45 +218,39 @@ export const DeviceMockup: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* 2. Top-Right: Elena Rostova (CLEAN & UNOBSTRUCTED) */}
-                      <div className="relative rounded-2xl overflow-hidden bg-[#111318] ring-1 ring-white/10 flex items-center justify-center">
-                        <img
-                          src="/attendees/attendee-tr.png"
-                          alt="Elena Rostova"
-                          className="w-full h-full object-cover"
-                        />
+                      {/* 2. Top-Right: Attendee 2 Tile */}
+                      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#10141e] via-[#0d1017] to-[#080b10] ring-1 ring-white/10 flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 font-extrabold text-sm sm:text-base shadow-inner">
+                          SJ
+                        </div>
                         <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-md text-white text-[11px] font-medium border border-white/10 shadow-sm flex items-center space-x-1.5">
-                          <span>Elena Rostova (Partner)</span>
+                          <span>Sarah J. (Partner)</span>
                         </div>
                         <div className="absolute top-2 right-2 p-1 rounded-md bg-black/50 backdrop-blur-md text-slate-300 border border-white/10">
                           <Mic className="w-3 h-3 text-emerald-400" />
                         </div>
                       </div>
 
-                      {/* 3. Bottom-Left: Marcus Vance (Architect) */}
-                      <div className="relative rounded-2xl overflow-hidden bg-[#111318] ring-1 ring-white/10 flex items-center justify-center">
-                        <img
-                          src="/attendees/attendee-bl.png"
-                          alt="Marcus Vance"
-                          className="w-full h-full object-cover"
-                        />
+                      {/* 3. Bottom-Left: Attendee 3 Tile */}
+                      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#10141e] via-[#0d1017] to-[#080b10] ring-1 ring-white/10 flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-slate-700/30 border border-slate-600/40 flex items-center justify-center text-slate-200 font-extrabold text-sm sm:text-base shadow-inner">
+                          MV
+                        </div>
                         <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-md text-white text-[11px] font-medium border border-white/10 shadow-sm">
-                          Marcus Vance (Architect)
+                          Marcus V. (Architect)
                         </div>
                         <div className="absolute top-2 right-2 p-1 rounded-md bg-black/50 backdrop-blur-md text-slate-300 border border-white/10">
                           <Mic className="w-3 h-3 text-emerald-400" />
                         </div>
                       </div>
 
-                      {/* 4. Bottom-Right: David Kim (Lead Engineer - 100% VISIBLE!) */}
-                      <div className="relative rounded-2xl overflow-hidden bg-[#111318] ring-1 ring-white/10 flex items-center justify-center">
-                        <img
-                          src="/attendees/attendee-br.png"
-                          alt="David Kim"
-                          className="w-full h-full object-cover"
-                        />
+                      {/* 4. Bottom-Right: Attendee 4 Tile */}
+                      <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#10141e] via-[#0d1017] to-[#080b10] ring-1 ring-white/10 flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-sky-700/20 border border-sky-600/30 flex items-center justify-center text-sky-300 font-extrabold text-sm sm:text-base shadow-inner">
+                          DK
+                        </div>
                         <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-lg bg-black/65 backdrop-blur-md text-white text-[11px] font-medium border border-white/10 shadow-sm">
-                          David Kim (Lead Engineer)
+                          David K. (Platform)
                         </div>
                         <div className="absolute top-2 right-2 p-1 rounded-md bg-black/50 backdrop-blur-md text-slate-300 border border-white/10">
                           <Mic className="w-3 h-3 text-emerald-400" />
@@ -309,9 +309,9 @@ export const DeviceMockup: React.FC = () => {
 
                           <div className="space-y-1">
                             {[
-                              { text: 'Benchmark cellular packet loss recovery', owner: 'Marcus' },
-                              { text: 'Finalize WebRTC ICE candidate gathering', owner: 'David' },
-                              { text: 'Review keynote presentation deck', owner: 'Elena' },
+                              { text: 'Verify DTLS 256-bit media encryption', owner: 'Host' },
+                              { text: 'Test low-latency WebRTC mesh signaling', owner: 'Platform' },
+                              { text: 'Review conference agenda & action notes', owner: 'Team' },
                             ].map((item, idx) => (
                               <div
                                 key={idx}
@@ -579,28 +579,22 @@ export const DeviceMockup: React.FC = () => {
                   
                   {activeTab === 'video' && (
                     <div className="flex-1 flex flex-col justify-between space-y-2">
-                      {/* Primary Mobile Video Feed: Active Speaker Aarav */}
-                      <div className="relative flex-1 rounded-2xl overflow-hidden bg-[#111318] ring-2 ring-emerald-500/80 shadow-md">
-                        <img
-                          src="/attendees/speaker-tl.png"
-                          alt="Mobile Active Speaker"
-                          className="w-full h-full object-cover"
-                        />
+                      {/* Primary Mobile Video Feed: Active Speaker */}
+                      <div className="relative flex-1 rounded-2xl overflow-hidden bg-gradient-to-br from-[#131b2e] via-[#0d1322] to-[#0a0f1a] ring-2 ring-emerald-500/80 shadow-md flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-xl bg-blue-600/30 border border-blue-500/40 flex items-center justify-center text-white font-extrabold text-sm shadow-inner">
+                          {hostInitials}
+                        </div>
                         {/* Speaker Name Tag */}
                         <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[9px] font-bold text-white flex items-center space-x-1">
-                          <span>Aarav</span>
+                          <span>{hostDisplayName}</span>
                           <span className="text-emerald-400">• Speaking</span>
                         </div>
 
-                        {/* Floating Attendee PIP Tile (Elena) */}
-                        <div className="absolute top-2 right-2 w-16 aspect-video rounded-xl overflow-hidden bg-black/80 ring-1 ring-white/20 shadow-lg">
-                          <img
-                            src="/attendees/attendee-tr.png"
-                            alt="PIP Attendee"
-                            className="w-full h-full object-cover"
-                          />
+                        {/* Floating Attendee PIP Tile */}
+                        <div className="absolute top-2 right-2 w-14 aspect-video rounded-xl overflow-hidden bg-slate-900/90 ring-1 ring-white/20 shadow-lg flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-indigo-300">SJ</span>
                           <span className="absolute bottom-0.5 left-1 text-[7px] text-white font-bold bg-black/50 px-1 rounded">
-                            Elena
+                            Sarah
                           </span>
                         </div>
                       </div>

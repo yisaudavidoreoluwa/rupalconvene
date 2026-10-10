@@ -111,35 +111,25 @@ export const VideoTile: React.FC<VideoTileProps> = ({
           <audio ref={remoteAudioRef} autoPlay playsInline />
         )}
 
-        {/* Photographic or Avatar Fallback */}
+        {/* Clean Avatar Display when Video is Inactive */}
         {!isVideoActive && (
-          participant.avatar && (participant.avatar.includes('attendees/') || participant.avatar.includes('unsplash.com') || participant.avatar.includes('photo-')) ? (
-            <div className="relative w-full h-full">
+          <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#181a20] via-[#111318] to-[#181a20]">
+            <div className="relative mb-2 sm:mb-3">
               <img
                 src={participant.avatar}
                 alt={participant.name}
-                className="w-full h-full object-cover"
+                className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg transition-transform group-hover:scale-105 ${
+                  participant.isSpeaking
+                    ? 'ring-3 ring-[#10b981] ring-offset-2 ring-offset-[#111318]'
+                    : 'ring-1 ring-white/20'
+                }`}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/20" />
+              {participant.isSpeaking && (
+                <div className="absolute -bottom-1 -right-1 p-1 bg-[#10b981] rounded-full text-white shadow-xs">
+                  <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="relative w-full h-full flex flex-col items-center justify-center p-4 sm:p-6 bg-gradient-to-b from-[#181a20] via-[#111318] to-[#181a20]">
-              <div className="relative mb-2 sm:mb-3">
-                <img
-                  src={participant.avatar}
-                  alt={participant.name}
-                  className={`w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover shadow-lg transition-transform group-hover:scale-105 ${
-                    participant.isSpeaking
-                      ? 'ring-3 ring-[#10b981] ring-offset-2 ring-offset-[#111318]'
-                      : 'ring-1 ring-white/20'
-                  }`}
-                />
-                {participant.isSpeaking && (
-                  <div className="absolute -bottom-1 -right-1 p-1 bg-[#10b981] rounded-full text-white shadow-xs">
-                    <Volume2 className="w-3.5 h-3.5 animate-pulse" />
-                  </div>
-                )}
-              </div>
 
               <div className="text-center z-10 px-2">
                 <div className="text-xs sm:text-sm font-bold text-white truncate max-w-[160px] sm:max-w-[200px] flex items-center justify-center">
@@ -150,8 +140,7 @@ export const VideoTile: React.FC<VideoTileProps> = ({
                   {participant.jobTitle || 'Active Member'}
                 </div>
               </div>
-            </div>
-          )
+          </div>
         )}
       </div>
 

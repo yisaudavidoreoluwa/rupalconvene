@@ -57,75 +57,10 @@ export const VideoStage: React.FC<VideoStageProps> = ({
   const stageParticipants = participants.filter((p) => !p.inGreenRoom);
   const greenRoomParticipants = participants.filter((p) => p.inGreenRoom);
 
-  // Realistic sample attendees from reference screenshot to form a 4-person grid
-  const mockPeers: Participant[] = useMemo(() => [
-    {
-      id: 'mock-elena',
-      name: 'Elena Rostova',
-      email: 'elena@syndicatevc.com',
-      organization: 'Syndicate Capital',
-      role: 'investor',
-      jobTitle: 'Managing Partner',
-      avatar: '/attendees/attendee-tr.png',
-      isMuted: false,
-      isVideoOff: false,
-      isScreenSharing: false,
-      isSpeaking: false,
-      handRaised: false,
-      inGreenRoom: false,
-    },
-    {
-      id: 'mock-marcus',
-      name: 'Marcus Vance',
-      email: 'marcus@rupal.tech',
-      organization: 'Rupal Systems',
-      role: 'tech-lead',
-      jobTitle: 'Principal Architect',
-      avatar: '/attendees/attendee-bl.png',
-      isMuted: true,
-      isVideoOff: false,
-      isScreenSharing: false,
-      isSpeaking: false,
-      handRaised: false,
-      inGreenRoom: false,
-    },
-    {
-      id: 'mock-david',
-      name: 'David Kim',
-      email: 'david@rupal.tech',
-      organization: 'Rupal Systems',
-      role: 'developer',
-      jobTitle: 'Staff Engineer',
-      avatar: '/attendees/attendee-br.png',
-      isMuted: true,
-      isVideoOff: false,
-      isScreenSharing: false,
-      isSpeaking: false,
-      handRaised: false,
-      inGreenRoom: false,
-    },
-  ], []);
-
-  // Compute 4-grid participants
+  // Purely real participants - zero dummy or simulated attendees
   const displayParticipants = useMemo(() => {
-    if (compactMode) return stageParticipants;
-
-    let combined = [...stageParticipants];
-
-    // If fewer than 4 participants, supplement with the co-attendees from reference image
-    if (combined.length < 4) {
-      const needed = 4 - combined.length;
-      combined = [...combined, ...mockPeers.slice(0, needed)];
-    }
-
-    // Ensure the top-left participant has the bright emerald active-speaker ring if none speaking
-    const hasSpeaker = combined.some((p) => p.isSpeaking);
-    if (!hasSpeaker && combined.length > 0) {
-      combined[0] = { ...combined[0], isSpeaking: true };
-    }
-
-    return combined;
-  }, [stageParticipants, compactMode, mockPeers]);
+    return stageParticipants;
+  }, [stageParticipants]);
 
   const primaryParticipant = 
     displayParticipants.find((p) => p.id === pinnedId) ||
