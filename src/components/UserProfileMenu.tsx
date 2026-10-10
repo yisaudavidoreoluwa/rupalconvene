@@ -92,7 +92,7 @@ export function UserProfileMenu({ onOpenCalendarSettings }: UserProfileMenuProps
       {/* Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-slate-100 transition-colors border border-slate-100"
+        className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-slate-100 transition-colors border border-slate-100 whitespace-nowrap shrink-0 cursor-pointer"
       >
         <div className="relative">
           <img

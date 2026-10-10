@@ -17,6 +17,7 @@ import {
   Play, 
   ExternalLink, 
   ChevronRight, 
+  ChevronDown,
   Plus, 
   Wrench, 
   Radio, 
@@ -24,12 +25,16 @@ import {
   Building2,
   Mail,
   Phone,
-  MapPin
+  MapPin,
+  Presentation,
+  Menu,
+  X
 } from 'lucide-react';
 import { DeviceMockup } from './DeviceMockup';
 import { ConferenceCalendar } from './ConferenceCalendar';
 import { ScheduleMeetingModal } from './ScheduleMeetingModal';
 import { CalendarSettingsModal } from './CalendarSettingsModal';
+import { SubscriptionModal } from './SubscriptionModal';
 import { 
   ScheduledConference, 
   INITIAL_SCHEDULED_CONFERENCES,
@@ -58,6 +63,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   // Modal open states
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
   const [isCalendarSettingsOpen, setIsCalendarSettingsOpen] = useState(false);
+  const [isSubscriptionOpen, setIsSubscriptionOpen] = useState(false);
+  const [isFeaturesMenuOpen, setIsFeaturesMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [scheduleInitialDate, setScheduleInitialDate] = useState<string | undefined>(undefined);
 
   // User-specific calendar settings
@@ -168,61 +176,164 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen w-full bg-[#f8fafc] text-[#0f172a] flex flex-col font-sans select-none overflow-x-hidden pb-16 sm:pb-0">
       {/* ============================================================ */}
-      {/* 1. MINIMAL SPACIOUS NAVIGATION HEADER                        */}
+      {/* 0. SLEEK MINIMAL ANNOUNCEMENT SUB-HEADER                    */}
       {/* ============================================================ */}
-      <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-[0_2px_15px_-3px_rgba(0,0,0,0.04)] px-6 sm:px-12 py-3.5 flex items-center justify-between">
+      <div className="bg-[#0f172a] text-white text-[11px] font-medium py-1.5 px-6 sm:px-12 flex items-center justify-between border-b border-slate-800/80">
+        <div className="flex items-center space-x-2 mx-auto sm:mx-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-slate-300">
+            WebRTC Mesh 2.0 with Gemini AI Meeting Notes
+          </span>
+          <span className="hidden md:inline text-slate-600">•</span>
+          <span className="hidden md:inline text-slate-400">Sub-2ms peer signaling active</span>
+        </div>
+        <div className="hidden sm:flex items-center space-x-3 text-slate-300">
+          <button
+            onClick={() => setIsSubscriptionOpen(true)}
+            className="text-blue-400 hover:text-blue-300 font-semibold cursor-pointer transition-colors"
+          >
+            Subscription Plans →
+          </button>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
+      {/* 1. CLEAN & MINIMAL SPACIOUS NAVIGATION HEADER                */}
+      {/* ============================================================ */}
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/70 px-6 sm:px-12 py-3 flex items-center justify-between">
         {/* Brand Logo */}
-        <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <div className="w-9 h-9 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center shadow-sm">
+        <div className="flex items-center space-x-3 cursor-pointer shrink-0" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="w-9 h-9 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center shadow-xs">
             <span className="font-extrabold text-base">R</span>
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-base sm:text-lg text-[#0f172a] tracking-tight leading-none">
+            <span className="font-extrabold text-base sm:text-lg text-[#0f172a] tracking-tight leading-none whitespace-nowrap">
               Rupal Convene
             </span>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">
+            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 whitespace-nowrap">
               Engineering Video Suite
             </span>
           </div>
         </div>
 
-        {/* Center Nav Links */}
-        <nav className="hidden md:flex items-center space-x-5 text-xs font-semibold text-slate-600">
-          <a href="#programs" className="hover:text-[#0f172a] transition-colors">
-            Program Categories
-          </a>
-          <a href="#preview" className="hover:text-[#0f172a] transition-colors">
-            Device Mockup
-          </a>
-          <a href="#calendar" className="hover:text-[#0f172a] transition-colors">
-            Conferences & Calendar
-          </a>
-          <a href="#features" className="hover:text-[#0f172a] transition-colors">
-            Workspace Tools
-          </a>
-          {onOpenProgramsHub && (
-            <button
-              onClick={onOpenProgramsHub}
-              className="hover:text-blue-700 transition-colors cursor-pointer flex items-center space-x-1.5 text-blue-600 font-bold bg-blue-50 hover:bg-blue-100/70 px-3 py-1.5 rounded-full border border-blue-200/60 shadow-2xs"
+        {/* Center Nav Links - Clean, Minimal & Whitespace-Nowrap */}
+        <nav className="hidden lg:flex items-center space-x-6 text-xs font-semibold text-slate-600">
+          {/* Features Dropdown Submenu */}
+          <div 
+            className="relative" 
+            onMouseEnter={() => setIsFeaturesMenuOpen(true)} 
+            onMouseLeave={() => setIsFeaturesMenuOpen(false)}
+          >
+            <a 
+              href="#features"
+              onClick={() => setIsFeaturesMenuOpen(false)}
+              className="flex items-center space-x-1 hover:text-[#0f172a] transition-colors whitespace-nowrap cursor-pointer py-1"
             >
-              <Sparkles className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
-              <span>Programs & Hackathons</span>
-            </button>
-          )}
-          <button onClick={onOpenDocs} className="hover:text-[#0f172a] transition-colors cursor-pointer">
-            Documentation
+              <span>Features</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${isFeaturesMenuOpen ? 'rotate-180 text-blue-600' : ''}`} />
+            </a>
+
+            {/* Dropdown Sub-menu */}
+            {isFeaturesMenuOpen && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-72 rounded-2xl bg-white border border-slate-200/90 shadow-xl shadow-slate-900/10 p-2 space-y-1 animate-in fade-in slide-in-from-top-1 duration-150 z-50">
+                <a 
+                  href="#features" 
+                  onClick={() => setIsFeaturesMenuOpen(false)}
+                  className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <Code className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#0f172a] group-hover:text-blue-600 transition-colors">Collaborative Code IDE</div>
+                    <div className="text-[11px] text-slate-500 font-normal">Multi-language execution in-call</div>
+                  </div>
+                </a>
+
+                <a 
+                  href="#features" 
+                  onClick={() => setIsFeaturesMenuOpen(false)}
+                  className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                    <Layout className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#0f172a] group-hover:text-emerald-600 transition-colors">Architecture Whiteboard</div>
+                    <div className="text-[11px] text-slate-500 font-normal">Cloud topologies & system diagrams</div>
+                  </div>
+                </a>
+
+                <a 
+                  href="#features" 
+                  onClick={() => setIsFeaturesMenuOpen(false)}
+                  className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <Presentation className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#0f172a] group-hover:text-indigo-600 transition-colors">Pitch Deck Viewer</div>
+                    <div className="text-[11px] text-slate-500 font-normal">Synchronized slides & watermarking</div>
+                  </div>
+                </a>
+
+                <a 
+                  href="#features" 
+                  onClick={() => setIsFeaturesMenuOpen(false)}
+                  className="flex items-start space-x-3 p-2.5 rounded-xl hover:bg-slate-50 transition-colors group cursor-pointer"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-[#0f172a] group-hover:text-amber-600 transition-colors">Gemini AI Minutes</div>
+                    <div className="text-[11px] text-slate-500 font-normal">Automated notes, action items & logs</div>
+                  </div>
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Programs Link with Optional Hub Trigger */}
+          <a 
+            href="#programs" 
+            className="hover:text-[#0f172a] transition-colors whitespace-nowrap cursor-pointer flex items-center space-x-1"
+          >
+            <span>Programs</span>
+            {onOpenProgramsHub && (
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+            )}
+          </a>
+
+          {/* Calendar Link */}
+          <a href="#calendar" className="hover:text-[#0f172a] transition-colors whitespace-nowrap">
+            Calendar
+          </a>
+
+          {/* Subscription / Pricing Link */}
+          <button
+            onClick={() => setIsSubscriptionOpen(true)}
+            className="hover:text-[#0f172a] transition-colors whitespace-nowrap cursor-pointer flex items-center space-x-1 text-slate-600 hover:text-slate-900"
+          >
+            <span>Pricing</span>
+          </button>
+
+          {/* Documentation Link */}
+          <button onClick={onOpenDocs} className="hover:text-[#0f172a] transition-colors cursor-pointer whitespace-nowrap">
+            Docs
           </button>
         </nav>
 
         {/* Right CTA Actions */}
-        <div className="flex items-center space-x-2.5">
+        <div className="flex items-center space-x-2.5 shrink-0">
           {isAuthenticated ? (
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => onProceedToLobby('host')}
-                className="hidden sm:flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                className="hidden sm:flex items-center space-x-1.5 px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
               >
-                <span>Enter Meeting Lobby</span>
+                <span>Enter Lobby</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
               <UserProfileMenu onOpenCalendarSettings={() => setIsCalendarSettingsOpen(true)} />
@@ -231,20 +342,85 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => openAuthModal('login')}
-                className="px-4 py-2 rounded-full text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer"
+                className="px-4 py-2 rounded-full text-slate-700 hover:text-slate-900 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap"
               >
                 Sign In
               </button>
               <button
                 onClick={() => openAuthModal('signup')}
-                className="px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer"
+                className="px-4 py-2 rounded-full bg-[#0f172a] hover:bg-[#1e293b] text-white font-bold text-xs shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
               >
                 Get Started
               </button>
             </div>
           )}
+
+          {/* Mobile Hamburger Menu Toggle */}
+          <button
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Toggle navigation menu"
+          >
+            {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </header>
+
+      {/* Mobile Drawer Menu when hamburger is open */}
+      {mobileNavOpen && (
+        <div className="lg:hidden bg-white border-b border-slate-200 px-6 py-4 space-y-3 animate-in slide-in-from-top-2 duration-150 text-xs font-semibold text-slate-700 shadow-md">
+          <a
+            href="#features"
+            onClick={() => setMobileNavOpen(false)}
+            className="block py-2 hover:text-[#0f172a]"
+          >
+            Features & Tools
+          </a>
+          <a
+            href="#programs"
+            onClick={() => setMobileNavOpen(false)}
+            className="block py-2 hover:text-[#0f172a]"
+          >
+            Programs & Hackathons
+          </a>
+          <a
+            href="#calendar"
+            onClick={() => setMobileNavOpen(false)}
+            className="block py-2 hover:text-[#0f172a]"
+          >
+            Calendar & Conferences
+          </a>
+          <button
+            onClick={() => {
+              setMobileNavOpen(false);
+              setIsSubscriptionOpen(true);
+            }}
+            className="block w-full text-left py-2 hover:text-[#0f172a]"
+          >
+            Pricing & Subscriptions
+          </button>
+          <button
+            onClick={() => {
+              setMobileNavOpen(false);
+              onOpenDocs();
+            }}
+            className="block w-full text-left py-2 hover:text-[#0f172a]"
+          >
+            Documentation & SDK
+          </button>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <button
+              onClick={() => {
+                setMobileNavOpen(false);
+                onProceedToLobby('host');
+              }}
+              className="w-full py-2.5 rounded-full bg-[#0f172a] text-white font-bold text-center"
+            >
+              Enter Meeting Lobby
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ============================================================ */}
       {/* 2. HERO SECTION (SPACIOUS & ELEVATED)                        */}
@@ -836,6 +1012,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         userConferences={scheduledConferences}
         onSettingsSaved={(newSettings) => {
           setCalendarSettings(newSettings);
+        }}
+      />
+
+      {/* SaaS Subscription Plans Modal */}
+      <SubscriptionModal
+        isOpen={isSubscriptionOpen}
+        onClose={() => setIsSubscriptionOpen(false)}
+        onSelectPlan={(planId) => {
+          if (planId === 'starter') {
+            onProceedToLobby('host');
+          } else {
+            openAuthModal('signup');
+          }
         }}
       />
     </div>
