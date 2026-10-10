@@ -18,6 +18,8 @@ import {
   Image as ImageIcon,
   Sparkles,
   Maximize2,
+  Minimize2,
+  Layers,
   Hand,
   Lock,
   Unlock,
@@ -103,22 +105,76 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
   const [isLaserActive, setIsLaserActive] = useState(false);
   const [localLaser, setLocalLaser] = useState<{ x: number; y: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFilmstrip, setShowFilmstrip] = useState(true);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [deckRequestSent, setDeckRequestSent] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Reset zoom and pan whenever slide changes
+  useEffect(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, [currentSlideIndex]);
+
+  // Full Screen API toggle with graceful in-app fallback
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      if (viewerContainerRef.current?.requestFullscreen) {
+        viewerContainerRef.current.requestFullscreen().catch(() => {
+          setIsFullscreen((prev) => !prev);
+        });
+      } else {
+        setIsFullscreen((prev) => !prev);
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {
+          setIsFullscreen(false);
+        });
+      } else {
+        setIsFullscreen(false);
+      }
+    }
+  }, []);
+
+  // Sync fullscreen state with document events
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, []);
 
   // Determine if current user is allowed to control slides & deck (Requirement 6)
   const hasDeckControl = isHost || roomPermissions?.handsOnDeck || canControlDeck;
 
   const slide = slides[currentSlideIndex] || slides[0];
 
-  // Keyboard navigation (Left / Right Arrow) - Only if user has deck control
+  // Keyboard navigation (Left / Right Arrow, 'F' for Fullscreen) - Only if user has deck control
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!hasDeckControl) return;
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Fullscreen shortcut 'F'
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+
+      if (!hasDeckControl) return;
       if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         if (currentSlideIndex < slides.length - 1) onSlideChange(currentSlideIndex + 1);
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
@@ -127,7 +183,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentSlideIndex, slides.length, onSlideChange, hasDeckControl]);
+  }, [currentSlideIndex, slides.length, onSlideChange, hasDeckControl, toggleFullscreen]);
 
   const handlePrev = () => {
     if (!hasDeckControl) return;
@@ -323,13 +379,52 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
     }
   }, [onLaserMove]);
 
+  // Pan and Mouse-Wheel Zoom interactions for uploaded document & slides
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (zoomLevel > 1 && e.button === 0) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    }
+  };
+
+  const handleStageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    handleMouseMove(e);
+    if (isPanning && zoomLevel > 1) {
+      setPanOffset({
+        x: e.clientX - panStart.x,
+        y: e.clientY - panStart.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsPanning(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.deltaY < 0) {
+      setZoomLevel((z) => Math.min(3, +(z + 0.15).toFixed(2)));
+    } else if (e.deltaY > 0) {
+      setZoomLevel((z) => {
+        const next = Math.max(0.5, +(z - 0.15).toFixed(2));
+        if (next <= 1) setPanOffset({ x: 0, y: 0 });
+        return next;
+      });
+    }
+  };
+
   const activeLaser = isLaserActive ? localLaser : (laserPointer?.visible ? laserPointer : null);
 
   const watermarkString = `CONFIDENTIAL • ${currentUser.name.toUpperCase()} • ${currentUser.email || 'RUPAL CONVENE'} • ENCRYPTED SESSION`;
 
   return (
     <div 
-      className="w-full h-full flex flex-col bg-white rounded-3xl overflow-hidden shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)] relative select-none"
+      ref={viewerContainerRef}
+      className={`w-full h-full flex flex-col bg-white overflow-hidden relative select-none transition-all duration-200 ${
+        isFullscreen 
+          ? 'fixed inset-0 z-[100] w-screen h-screen bg-slate-950 rounded-none' 
+          : 'rounded-3xl shadow-[0_4px_25px_-5px_rgba(0,0,0,0.05)]'
+      }`}
       onDragOver={(e) => { 
         if (hasDeckControl) {
           e.preventDefault(); 
@@ -350,7 +445,7 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
 
       {/* Screen-Privacy Watermark Overlay */}
       {isWatermarkActive && (
-        <div className="absolute inset-0 z-30 pointer-events-none overflow-hidden flex flex-col justify-around py-8 opacity-15">
+        <div className="absolute inset-0 z-40 pointer-events-none overflow-hidden flex flex-col justify-around py-8 opacity-15">
           {[...Array(6)].map((_, i) => (
             <div
               key={i}
@@ -363,23 +458,31 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
       )}
 
       {/* Top Presentation Action Bar */}
-      <div className="h-12 bg-white px-3 sm:px-4 flex items-center justify-between z-20 flex-shrink-0 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
+      <div className={`h-12 px-3 sm:px-4 flex items-center justify-between z-30 flex-shrink-0 border-b transition-colors ${
+        isFullscreen 
+          ? 'bg-slate-900 border-white/10 text-white' 
+          : 'bg-white border-slate-100 text-[#0f172a] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]'
+      }`}>
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#0f172a] text-white whitespace-nowrap">
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${
+            isFullscreen ? 'bg-blue-600 text-white' : 'bg-[#0f172a] text-white'
+          }`}>
             {slide?.category || 'Presentation'}
           </span>
-          <span className="text-xs text-slate-500 font-semibold whitespace-nowrap">
+          <span className={`text-xs font-semibold whitespace-nowrap ${
+            isFullscreen ? 'text-slate-300' : 'text-slate-500'
+          }`}>
             Slide {currentSlideIndex + 1} of {slides.length}
           </span>
           {uploadStatus && (
-            <span className="text-xs text-blue-600 font-medium flex items-center gap-1 animate-in fade-in truncate max-w-[150px] sm:max-w-[240px]">
-              <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-600" />
+            <span className="text-xs text-blue-400 font-medium flex items-center gap-1 animate-in fade-in truncate max-w-[150px] sm:max-w-[240px]">
+              <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 text-emerald-400" />
               <span className="truncate">{uploadStatus}</span>
             </span>
           )}
         </div>
 
-        {/* Center/Right: Hands on Deck Controls (Requirement 6) */}
+        {/* Center/Right: Hands on Deck Controls, Full Screen & Tools */}
         <div className="flex items-center space-x-1.5 sm:space-x-2">
           {/* Host Hands on Deck Toggle */}
           {isHost ? (
@@ -388,6 +491,8 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
               className={`flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-bold transition-all ${
                 roomPermissions?.handsOnDeck
                   ? 'bg-emerald-500 text-white shadow-xs'
+                  : isFullscreen
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
               title="Toggle Hands on Deck: Allow all attendees to advance slides and present"
@@ -405,8 +510,10 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center space-x-1.5">
-                  <div className="flex items-center space-x-1 px-2 py-1 rounded-xl bg-slate-100 text-slate-600 text-xs">
-                    <Lock className="w-3 h-3 text-slate-500" />
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-xl text-xs ${
+                    isFullscreen ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    <Lock className="w-3 h-3 text-slate-400" />
                     <span className="hidden xs:inline">Host Locked</span>
                   </div>
                   <button
@@ -428,6 +535,8 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
               className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
                 isLaserActive
                   ? 'bg-red-500 text-white shadow-xs'
+                  : isFullscreen
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                   : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
               }`}
               title={isLaserActive ? 'Turn off laser pointer' : 'Turn on live laser pointer'}
@@ -450,10 +559,14 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
-                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors disabled:opacity-50"
+                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-colors disabled:opacity-50 ${
+                  isFullscreen
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                }`}
                 title="Upload multi-page PDF or slide image"
               >
-                <Upload className="w-3.5 h-3.5 text-slate-500" />
+                <Upload className="w-3.5 h-3.5 text-slate-400" />
                 <span className="hidden sm:inline">{isUploading ? 'Extracting...' : 'Upload PDF / Slide'}</span>
               </button>
             </>
@@ -462,10 +575,14 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
           {/* Deal Room Button */}
           <button
             onClick={onOpenDealRoom}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors"
+            className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-colors ${
+              isFullscreen
+                ? 'bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/30'
+                : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+            }`}
             title="Open Deal Room & Term Sheet"
           >
-            <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+            <Briefcase className="w-3.5 h-3.5 text-blue-500" />
             <span className="hidden md:inline">Deal Room</span>
           </button>
 
@@ -474,7 +591,9 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
             onClick={() => setShowSpeakerNotes(!showSpeakerNotes)}
             className={`px-2 py-1 rounded-xl text-xs font-semibold transition-colors ${
               showSpeakerNotes
-                ? 'bg-[#0f172a] text-white'
+                ? 'bg-blue-600 text-white'
+                : isFullscreen
+                ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                 : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
             }`}
             title="Toggle speaker notes"
@@ -482,12 +601,45 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
             <FileText className="w-3.5 h-3.5" />
           </button>
 
+          {/* Filmstrip Toggle Button */}
+          {slides.length > 0 && (
+            <button
+              onClick={() => setShowFilmstrip(!showFilmstrip)}
+              className={`p-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                showFilmstrip
+                  ? isFullscreen ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700'
+                  : isFullscreen ? 'bg-slate-800/40 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-600'
+              }`}
+              title={showFilmstrip ? 'Hide thumbnails filmstrip' : 'Show thumbnails filmstrip'}
+            >
+              <Layers className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Full Screen Mode Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all ${
+              isFullscreen
+                ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs ring-1 ring-blue-400'
+                : 'bg-[#0f172a] hover:bg-[#1e293b] text-white shadow-xs'
+            }`}
+            title={isFullscreen ? 'Exit Full Screen (Esc / F)' : 'Present in Full Screen (F)'}
+          >
+            {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isFullscreen ? 'Exit Full Screen' : 'Full Screen'}</span>
+          </button>
+
           {/* Slide Navigation Arrows */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl">
+          <div className={`flex items-center p-0.5 rounded-xl ${
+            isFullscreen ? 'bg-slate-800 border border-white/10' : 'bg-slate-100'
+          }`}>
             <button
               onClick={handlePrev}
               disabled={currentSlideIndex === 0 || !hasDeckControl}
-              className="p-1 rounded-lg text-slate-700 hover:text-[#0f172a] disabled:opacity-30 transition-colors"
+              className={`p-1 rounded-lg disabled:opacity-30 transition-colors ${
+                isFullscreen ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-[#0f172a]'
+              }`}
               title="Previous Slide (Left Arrow)"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -495,7 +647,9 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
             <button
               onClick={handleNext}
               disabled={currentSlideIndex === slides.length - 1 || !hasDeckControl}
-              className="p-1 rounded-lg text-slate-700 hover:text-[#0f172a] disabled:opacity-30 transition-colors"
+              className={`p-1 rounded-lg disabled:opacity-30 transition-colors ${
+                isFullscreen ? 'text-slate-300 hover:text-white' : 'text-slate-700 hover:text-[#0f172a]'
+              }`}
               title="Next Slide (Right Arrow)"
             >
               <ChevronRight className="w-4 h-4" />
@@ -507,14 +661,14 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
       {/* Main Presentation Stage */}
       <div 
         ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="flex-1 flex flex-col justify-between p-4 sm:p-8 overflow-y-auto bg-[#fafafa] relative z-10 cursor-default"
+        className={`flex-1 relative flex flex-col overflow-hidden cursor-default select-none ${
+          slide?.imageUrl ? 'bg-slate-950 items-center justify-center p-0' : 'bg-[#fafafa] p-4 sm:p-8 overflow-y-auto'
+        }`}
       >
         {/* Live Synchronized Laser Pointer */}
         {activeLaser && (
           <div 
-            className="absolute pointer-events-none z-40 transition-transform duration-75 -translate-x-1/2 -translate-y-1/2"
+            className="absolute pointer-events-none z-50 transition-transform duration-75 -translate-x-1/2 -translate-y-1/2"
             style={{ left: `${activeLaser.x}%`, top: `${activeLaser.y}%` }}
           >
             <div className="relative">
@@ -524,54 +678,139 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
           </div>
         )}
 
-        {/* 1. Uploaded Image / Document Slide View */}
+        {/* 1. Uploaded Image / Document Slide View (Full Stage Edge-to-Edge Display) */}
         {slide?.imageUrl ? (
-          <div className="w-full flex-1 flex flex-col items-center justify-center p-2 min-h-[300px]">
-            <div className="relative max-w-full max-h-[70vh] rounded-2xl overflow-hidden bg-white shadow-md border border-slate-100 flex items-center justify-center p-2">
+          <div 
+            className={`w-full h-full flex items-center justify-center relative overflow-hidden ${
+              zoomLevel > 1 ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-default'
+            }`}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleStageMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => {
+              setIsPanning(false);
+              handleMouseLeave();
+            }}
+            onWheel={handleWheel}
+          >
+            {/* Floating Document Header Pill (at top-left) */}
+            <div className="absolute top-3 left-3 z-30 flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-slate-900/85 backdrop-blur-md border border-white/10 text-white shadow-lg pointer-events-none max-w-[80%] truncate">
+              <span className="w-2 h-2 rounded-full bg-blue-400 flex-shrink-0 animate-pulse" />
+              <span className="text-xs font-semibold truncate">{slide.title}</span>
+              {slide.subtitle && (
+                <span className="text-[11px] text-slate-300 hidden sm:inline truncate border-l border-white/20 pl-2">
+                  {slide.subtitle}
+                </span>
+              )}
+            </div>
+
+            {/* Floating Navigation Chevrons on Stage Sides */}
+            {slides.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrev}
+                  disabled={currentSlideIndex === 0 || !hasDeckControl}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur-md border border-white/15 shadow-xl transition-all disabled:opacity-20 hover:scale-105 active:scale-95"
+                  title="Previous Slide (Left Arrow)"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={currentSlideIndex === slides.length - 1 || !hasDeckControl}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white backdrop-blur-md border border-white/15 shadow-xl transition-all disabled:opacity-20 hover:scale-105 active:scale-95"
+                  title="Next Slide (Right Arrow)"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
+
+            {/* The Edge-to-Edge Document / Slide Image */}
+            <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 select-none">
               <img
                 src={slide.imageUrl}
                 alt={slide.title}
-                style={{ transform: `scale(${zoomLevel})` }}
-                className="max-h-[60vh] max-w-full object-contain rounded-xl transition-transform duration-150 select-none pointer-events-none"
+                style={{ 
+                  transform: `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`,
+                  transformOrigin: 'center center',
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                }}
+                className="w-auto h-auto max-w-full max-h-full object-contain rounded-lg drop-shadow-2xl transition-transform duration-75 select-none pointer-events-none"
               />
+            </div>
 
-              {/* Floating Zoom Bar for Image Slides */}
-              <div className="absolute bottom-3 right-3 flex items-center space-x-1 p-1 rounded-xl bg-[#0f172a]/80 backdrop-blur-md text-white shadow-md z-20">
-                <button
-                  onClick={() => setZoomLevel((z) => Math.max(0.6, z - 0.2))}
-                  className="p-1 hover:text-blue-300 transition-colors"
-                  title="Zoom Out"
-                >
-                  <ZoomOut className="w-3.5 h-3.5" />
-                </button>
-                <span className="text-[10px] font-mono px-1 font-bold">
-                  {Math.round(zoomLevel * 100)}%
-                </span>
-                <button
-                  onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.2))}
-                  className="p-1 hover:text-blue-300 transition-colors"
-                  title="Zoom In"
-                >
-                  <ZoomIn className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setZoomLevel(1)}
-                  className="p-1 hover:text-blue-300 transition-colors border-l border-white/20 pl-1.5"
-                  title="Reset Zoom"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                </button>
+            {/* Floating Bottom Zoom and Full Screen Controls */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center space-x-1 sm:space-x-1.5 px-3 py-1.5 rounded-2xl bg-slate-950/90 backdrop-blur-md border border-white/15 text-white shadow-2xl z-30 select-none">
+              <button
+                onClick={() => setZoomLevel((z) => Math.max(0.5, +(z - 0.2).toFixed(1)))}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-slate-200 hover:text-white transition-colors"
+                title="Zoom Out (-)"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
+                className="px-2 py-0.5 rounded-md hover:bg-white/10 text-xs font-mono font-bold text-slate-200 hover:text-white transition-colors"
+                title="Click to Reset to 100%"
+              >
+                {Math.round(zoomLevel * 100)}%
+              </button>
+              <button
+                onClick={() => setZoomLevel((z) => Math.min(3, +(z + 0.2).toFixed(1)))}
+                className="p-1.5 hover:bg-white/10 rounded-lg text-slate-200 hover:text-white transition-colors"
+                title="Zoom In (+)"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <div className="h-4 w-px bg-white/20 mx-1" />
+              <button
+                onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
+                className="flex items-center space-x-1 px-2 py-1 rounded-lg hover:bg-white/10 text-xs text-slate-200 hover:text-white transition-colors"
+                title="Fit Document to Screen"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px] font-medium">Fit</span>
+              </button>
+              <div className="h-4 w-px bg-white/20 mx-1" />
+              <button
+                onClick={toggleFullscreen}
+                className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-xs"
+                title={isFullscreen ? 'Exit Full Screen (Esc / F)' : 'Enter Full Screen (F)'}
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                <span className="text-[11px]">{isFullscreen ? 'Exit' : 'Full Screen'}</span>
+              </button>
+            </div>
+
+            {/* Floating Speaker Notes */}
+            {showSpeakerNotes && (
+              <div className="absolute top-14 right-4 z-30 max-w-sm p-3.5 rounded-2xl bg-slate-900/95 backdrop-blur-md border border-white/15 text-xs text-slate-200 shadow-2xl animate-in fade-in">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-blue-400 uppercase tracking-wider text-[10px]">
+                    Presenter Notes
+                  </span>
+                  <button 
+                    onClick={() => setShowSpeakerNotes(false)}
+                    className="text-slate-400 hover:text-white p-0.5 text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="italic text-slate-100 leading-relaxed">
+                  &quot;{slide?.speakerNotes || 'No notes for this slide.'}&quot;
+                </p>
               </div>
-            </div>
-
-            <div className="mt-3 text-center">
-              <h2 className="text-base font-bold text-[#0f172a]">{slide.title}</h2>
-              <p className="text-xs text-slate-500 font-medium">{slide.subtitle}</p>
-            </div>
+            )}
           </div>
         ) : (
           /* 2. Structured Executive Pitch Slide View */
-          <div className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full py-4">
+          <div 
+            className="flex-1 flex flex-col justify-between w-full h-full max-w-4xl mx-auto py-4"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
             <div>
               <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold mb-3">
                 <Sparkles className="w-3 h-3" />
@@ -616,63 +855,77 @@ export const PitchDeckViewer: React.FC<PitchDeckViewerProps> = ({
                 ))}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Presenter Speaker Notes Banner */}
-        {showSpeakerNotes && (
-          <div className="mt-4 p-3.5 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-600 shadow-xs">
-            <span className="font-bold text-[#0f172a] uppercase tracking-wider text-[10px] block mb-1">
-              Presenter Notes:
-            </span>
-            <p className="italic text-slate-700 leading-relaxed">
-              &quot;{slide?.speakerNotes || 'No notes for this slide.'}&quot;
-            </p>
+            {/* Presenter Speaker Notes Banner */}
+            {showSpeakerNotes && (
+              <div className="mt-4 p-3.5 rounded-2xl bg-white border border-slate-200 text-xs sm:text-sm text-slate-600 shadow-xs">
+                <span className="font-bold text-[#0f172a] uppercase tracking-wider text-[10px] block mb-1">
+                  Presenter Notes:
+                </span>
+                <p className="italic text-slate-700 leading-relaxed">
+                  &quot;{slide?.speakerNotes || 'No notes for this slide.'}&quot;
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Bottom Slide Thumbnails Strip */}
-      <div className="h-16 bg-white border-t border-slate-100 px-3 flex items-center space-x-2.5 overflow-x-auto flex-shrink-0 z-20">
-        {slides.map((s, index) => (
-          <button
-            key={s.id || index}
-            onClick={() => hasDeckControl && onSlideChange(index)}
-            disabled={!hasDeckControl}
-            className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border text-left flex-shrink-0 transition-all ${
-              currentSlideIndex === index
-                ? 'bg-blue-50/80 border-blue-500 ring-1 ring-blue-500'
-                : hasDeckControl
-                ? 'bg-slate-50 border-slate-200/60 hover:border-slate-300'
-                : 'bg-slate-50/50 border-slate-200/40 opacity-70 cursor-not-allowed'
-            }`}
-          >
-            <div className="w-6 h-6 rounded-lg bg-[#0f172a] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
-              {s.imageUrl ? <ImageIcon className="w-3 h-3 text-cyan-300" /> : index + 1}
-            </div>
-            <div className="max-w-[100px] truncate">
-              <span className="text-[11px] font-bold text-slate-800 block truncate leading-tight">
-                {s.title}
-              </span>
-              <span className="text-[9px] text-slate-400 block truncate">
-                {s.category}
-              </span>
-            </div>
-          </button>
-        ))}
+      {showFilmstrip && (
+        <div className={`h-16 px-3 flex items-center space-x-2.5 overflow-x-auto flex-shrink-0 z-20 border-t transition-colors ${
+          isFullscreen 
+            ? 'bg-slate-900 border-white/10 text-white' 
+            : 'bg-white border-slate-100'
+        }`}>
+          {slides.map((s, index) => (
+            <button
+              key={s.id || index}
+              onClick={() => hasDeckControl && onSlideChange(index)}
+              disabled={!hasDeckControl}
+              className={`flex items-center space-x-2 px-2.5 py-1.5 rounded-xl border text-left flex-shrink-0 transition-all ${
+                currentSlideIndex === index
+                  ? isFullscreen
+                    ? 'bg-blue-600/30 border-blue-400 ring-1 ring-blue-400 text-white'
+                    : 'bg-blue-50/80 border-blue-500 ring-1 ring-blue-500'
+                  : hasDeckControl
+                  ? isFullscreen
+                    ? 'bg-slate-800/80 border-white/10 hover:border-white/30 text-slate-300'
+                    : 'bg-slate-50 border-slate-200/60 hover:border-slate-300 text-slate-800'
+                  : 'bg-slate-50/50 border-slate-200/40 opacity-70 cursor-not-allowed'
+              }`}
+            >
+              <div className="w-6 h-6 rounded-lg bg-[#0f172a] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">
+                {s.imageUrl ? <ImageIcon className="w-3 h-3 text-cyan-300" /> : index + 1}
+              </div>
+              <div className="max-w-[100px] truncate">
+                <span className={`text-[11px] font-bold block truncate leading-tight ${isFullscreen ? 'text-white' : 'text-slate-800'}`}>
+                  {s.title}
+                </span>
+                <span className={`text-[9px] block truncate ${isFullscreen ? 'text-slate-400' : 'text-slate-400'}`}>
+                  {s.category}
+                </span>
+              </div>
+            </button>
+          ))}
 
-        {/* Quick Add Slide Button */}
-        {hasDeckControl && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center space-x-1 px-3 py-2 rounded-xl border border-dashed border-slate-300 hover:border-blue-500 text-slate-500 hover:text-blue-600 text-xs font-semibold flex-shrink-0 transition-colors"
-            title="Upload multi-page PDF or slide image"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="text-[11px]">Add Slide / PDF</span>
-          </button>
-        )}
-      </div>
+          {/* Quick Add Slide Button */}
+          {hasDeckControl && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className={`flex items-center space-x-1 px-3 py-2 rounded-xl border border-dashed text-xs font-semibold flex-shrink-0 transition-colors ${
+                isFullscreen 
+                  ? 'border-white/20 hover:border-blue-400 text-slate-300 hover:text-white' 
+                  : 'border-slate-300 hover:border-blue-500 text-slate-500 hover:text-blue-600'
+              }`}
+              title="Upload multi-page PDF or slide image"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="text-[11px]">Add Slide / PDF</span>
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
